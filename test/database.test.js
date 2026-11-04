@@ -245,6 +245,23 @@ test('guest orders are not linked to an account with the same email', async () =
   assert.equal((await one(as('authenticated', SHOPPER_B, 'select my_orders() r'))).r.length, 0);
 });
 
+test('only admins can switch the store theme, and everyone can read it', async () => {
+  const read = async () => (await one(anon('select theme from store_settings'))).theme;
+  assert.equal(await read(), 'default');
+  await assert.rejects(anon("select admin_set_theme('halloween')"), /permission denied/);
+  await assert.rejects(stranger("select admin_set_theme('halloween')"), /Not authorised/);
+  await assert.rejects(anon("update store_settings set theme='halloween'"), /permission denied/);
+  await assert.rejects(stranger("update store_settings set theme='halloween'"), /permission denied/);
+  assert.equal(await read(), 'default');
+  await admin("select admin_set_theme('halloween')");
+  assert.equal(await read(), 'halloween');
+  await admin("select admin_set_theme('newyear')");
+  assert.equal(await read(), 'newyear');
+  await assert.rejects(admin("select admin_set_theme('nope')"), /Unknown theme/);
+  await admin("select admin_set_theme('default')");
+  assert.equal(await read(), 'default');
+});
+
 test('clearing sample data leaves real clients and products', async () => {
   await db.exec(sql('clear-sample-data.sql'));
   assert.equal((await db.query("select * from customers where email like '%@example.com'")).rows.length, 0);

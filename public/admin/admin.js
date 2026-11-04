@@ -30,6 +30,7 @@
     orders: SVG('<path d="M6 7h12l1.500 13h-15zM9 7V5a3 3 0 0 1 6 0v2"/>'),
     products: SVG('<path d="M9 3h6v4H9zM7 7h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/>'),
     customers: SVG('<circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M16 4a4 4 0 0 1 0 8M22 21c0-3-1.500-5-4-5.700"/>'),
+    themes: SVG('<path d="M12 3a9 9 0 1 0 0 18c1.500 0 2-1 2-2 0-1.500-1-2-1-3 0-1 1-2 2-2h2a4 4 0 0 0 4-4c0-4-4-7-9-7z"/><circle cx="7.500" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/>'),
     store: SVG('<path d="M3 10v10h18V10M2 10l2-6h16l2 6zM9 20v-6h6v6"/>'),
     out: SVG('<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h10"/>'),
     bell: SVG('<path d="M6 10a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0"/>'),
@@ -72,7 +73,7 @@
   }
 
   // ------------------------------------------------------------ shell + routing
-  const NAV = [['overview', 'Overview'], ['orders', 'Orders'], ['products', 'Products'], ['customers', 'Customers']];
+  const NAV = [['overview', 'Overview'], ['orders', 'Orders'], ['products', 'Products'], ['customers', 'Customers'], ['themes', 'Themes']];
   const notif = { unread: 0, rows: [], pop: false };
 
   function renderShell() {
@@ -500,7 +501,47 @@
     $$('[data-oid]', dr).forEach(b => b.onclick = () => openOrder(Number(b.dataset.oid)));
   }
 
-  const VIEWS = { overview: viewOverview, orders: viewOrders, products: viewProducts, customers: viewCustomers };
+  // ------------------------------------------------------------ themes
+  const THEMES = [
+    { id: 'default', name: 'Alola', note: 'The everyday store look.', colors: ['#f6f2e9', '#66794a', '#3b261d', '#c4687c', '#e9d3a6'], bg: 'linear-gradient(135deg,#66794a,#3f4f2c)', ink: '#fff', font: '"Bricolage Grotesque",sans-serif', fontName: 'Bricolage Grotesque + DM Sans' },
+    { id: 'newyear', name: 'New Year', note: 'Midnight blue, gold and falling snow.', colors: ['#06101f', '#f6d878', '#d62839', '#5fd38d', '#14406e'], bg: 'linear-gradient(180deg,#0b1a3a,#14406e 55%,#d62839)', ink: '#f6d878', font: '"Mountains of Christmas",cursive', fontName: 'Mountains of Christmas + Cormorant Garamond' },
+    { id: 'halloween', name: 'Halloween', note: 'Pumpkin orange, purple, a full moon and bats.', colors: ['#0e0712', '#ff7a00', '#8a3fd1', '#9dff3a', '#ffc533'], bg: 'linear-gradient(180deg,#14081f,#3b1060 55%,#ff7a00)', ink: '#ffc533', font: '"Creepster",cursive', fontName: 'Creepster + IM Fell English' },
+  ];
+  async function viewThemes(el, token) {
+    el.innerHTML = '<div class="skeleton" style="height:320px"></div>';
+    // Load the display fonts so each card shows its real type. This only affects the sample text.
+    if (!$('#themeFonts')) {
+      const l = document.createElement('link');
+      l.id = 'themeFonts'; l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Creepster&display=swap';
+      document.head.append(l);
+    }
+    let active;
+    try { active = await db.theme(); } catch (e) { return fail(e); }
+    if (token !== viewToken) return;
+    const draw = () => {
+      $('#sub').textContent = `Live now: ${THEMES.find(t => t.id === active)?.name || active}`;
+      el.innerHTML = `<div class="themes">${THEMES.map(t => `<article class="th-card${t.id === active ? ' on' : ''}">
+        <div class="th-sample" style="background:${t.bg};color:${t.ink};font-family:${esc(t.font)}"><span>Glow loud.</span></div>
+        <div class="th-body"><div class="th-title"><h2>${t.name}</h2>${t.id === active ? '<span class="st st-live">Live now</span>' : ''}</div>
+          <p>${t.note}</p>
+          <div class="th-swatches" aria-hidden="true">${t.colors.map(c => `<i style="background:${c}"></i>`).join('')}</div>
+          <small>${t.fontName}</small>
+          <div class="th-acts"><a class="btn ln" href="../index.html?theme=${t.id}" target="_blank" rel="noopener">Preview</a>${t.id === active ? '' : `<button class="btn" data-theme-set="${t.id}">Make live</button>`}</div>
+        </div></article>`).join('')}</div>
+        <p class="th-help">Making a theme live changes the store for all visitors straight away. Anyone with a page already open sees it when they return to that page, or within five minutes. Preview only shows you the home page in that theme, and doesn’t change the live store.</p>`;
+      $$('[data-theme-set]', el).forEach(b => b.onclick = async () => {
+        const t = THEMES.find(x => x.id === b.dataset.themeSet);
+        $$('[data-theme-set]', el).forEach(x => x.disabled = true);
+        try { active = await db.setTheme(t.id); toast(`${esc(t.name)} is now live`); }
+        catch (e) { fail(e); }
+        if (token === viewToken) draw();
+      });
+    };
+    draw();
+  }
+
+  const VIEWS = { overview: viewOverview, orders: viewOrders, products: viewProducts, customers: viewCustomers, themes: viewThemes };
 
   // ------------------------------------------------------------ start
   let hashBound = false;

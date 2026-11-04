@@ -16,6 +16,7 @@ A cosmetics store and admin dashboard. The site is static files hosted on **GitH
 - Products: add, edit, hide or delete, with photo upload
 - Customers: contact details, total spent and order history
 - Live new-order alerts: bell counter, pop-up, sound, tab title count and optional desktop alerts
+- Themes: switch the live store between the normal look, New Year and Halloween
 
 ## How it fits together
 
@@ -89,6 +90,7 @@ The tests run the real schema and seed in an in-memory Postgres ([PGlite](https:
 | Delivery fee and free-delivery threshold | `store_settings` table in Supabase |
 | Free-delivery text in the top banner | `mountChrome` in `public/js/common.js` |
 | Supabase project | `public/js/config.js` |
+| Theme colours and fonts | `public/css/themes.css`, plus the font list in `public/js/theme.js` |
 
 ## Before going live
 

@@ -118,6 +118,12 @@ window.AdminDB = (function () {
     customer: id => rpc('admin_get_customer', { p_id: id }),
     products: () => rpc('admin_list_products'),
     saveProduct, deleteProduct, upload,
+    theme: async () => {
+      const { data, error } = await sb.from('store_settings').select('theme').single();
+      check(error);
+      return data.theme;
+    },
+    setTheme: theme => rpc('admin_set_theme', { p_theme: theme }),
     notifications, markRead, listen,
   };
 })();

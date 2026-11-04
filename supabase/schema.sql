@@ -92,7 +92,8 @@ create table admins (user_id uuid primary key);
 create table store_settings (
   id boolean primary key default true check (id), -- single row
   shipping_fee integer not null default 60,
-  free_shipping_over integer not null default 1000
+  free_shipping_over integer not null default 1000,
+  theme text not null default 'default' check (theme in ('default','newyear','halloween'))
 );
 insert into store_settings default values;
 
@@ -265,6 +266,14 @@ begin
   );
 end $$;
 
+create function admin_set_theme(p_theme text) returns text language plpgsql security definer set search_path = public as $$
+begin
+  perform require_admin();
+  if p_theme not in ('default','newyear','halloween') then raise exception 'Unknown theme'; end if;
+  update store_settings set theme = p_theme;
+  return p_theme;
+end $$;
+
 create function admin_list_products() returns jsonb language plpgsql stable security definer set search_path = public as $$
 begin
   perform require_admin();
@@ -409,7 +418,7 @@ grant execute on function is_admin() to anon, authenticated;
 grant execute on function place_order(jsonb), subscribe(text) to anon, authenticated;
 grant execute on function my_orders() to authenticated;
 grant execute on function admin_analytics(), admin_list_products(), admin_list_orders(text, text, integer), admin_get_order(bigint),
-  admin_set_order_status(bigint, text), admin_list_customers(text, text, integer), admin_get_customer(bigint) to authenticated;
+  admin_set_order_status(bigint, text), admin_set_theme(text), admin_list_customers(text, text, integer), admin_get_customer(bigint) to authenticated;
 
 -- ---------------------------------------------------------------- live notifications
 alter publication supabase_realtime add table notifications;

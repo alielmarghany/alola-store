@@ -1,0 +1,204 @@
+/* Seasonal store themes, based on the Alola Halloween and New Year designs.
+   Each theme sets its palette and fonts as variables; the shared rules below apply them.
+   With no data-theme on <html>, none of this file applies and the store keeps its normal look. */
+
+html[data-theme=halloween]{
+  --bg:#0e0712;--bg2:#2a1636;--card:#1d1024;--ink:#f5e9d3;--mute:#c9b3d9;--olive:#9dff3a;--olive2:#9dff3a;--sage:#2c1a3a;
+  --rose:#ff7a00;--rose2:#e06a00;--blush:#3b1060;--gold:#ffc533;--sand:#ffc533;--line:rgba(157,255,58,.28);--pu:#8a3fd1;--dark:#0e0712;
+  --display:"Creepster",cursive;--body:"IM Fell English",Georgia,serif;--serif:"Creepster",cursive;
+  --body-size:17px;--body-weight:400;--track:.04em;--logo-filter:invert(1) sepia(1) saturate(3) hue-rotate(-20deg) drop-shadow(0 0 6px #ff7a00);
+  --page:linear-gradient(#0e0712,#1a0a22 55%,#2b0f2e);--head:#170b1c;--glow:0 0 8px #9dff3a,0 0 22px rgba(157,255,58,.55);
+  --hero:radial-gradient(circle 300px at var(--mx,70%) var(--my,30%),rgba(255,122,0,.55),transparent 70%),linear-gradient(180deg,#14081f 0%,#3b1060 55%,#ff7a00 100%);
+  --hero-h1:linear-gradient(180deg,#fff 0%,#ffc533 48%,#ff5a00 52%,#ff7a00 100%);--hero-em:linear-gradient(180deg,#fff 0%,#9dff3a 50%,#8a3fd1 100%);
+  --t2:linear-gradient(135deg,#ff7a00,#8a3fd1);--t3:linear-gradient(135deg,#7a3cff,#2a0b45);--band:linear-gradient(90deg,#ff7a00,#8a3fd1);
+  --hover:linear-gradient(160deg,#ff7a00,#8a3fd1);--q2:linear-gradient(160deg,#3b1060,#8a3a00);--nl:linear-gradient(135deg,#2a0f3a,#7a2d00);
+  --ph1:#4d2a70,#8a3fd1;--ph2:#b34f00,#ff9a2e;--ph3:#3d5c14,#86c42c;--ph4:#5a2a6e,#b264d8;
+  --leaf-a:#9dff3a;--leaf-b:#ff7a00;--greeting:"Happy Halloween";
+}
+html[data-theme=newyear]{
+  --bg:#06101f;--bg2:#1b3454;--card:#10223d;--ink:#fff8ee;--mute:#a9bfd6;--olive:#5fd38d;--olive2:#5fd38d;--sage:#14304f;
+  --rose:#d62839;--rose2:#b01f2e;--blush:#14406e;--gold:#f6d878;--sand:#f6d878;--line:rgba(95,211,141,.28);--pu:#1f6b4a;--dark:#06101f;
+  --display:"Mountains of Christmas",cursive;--body:"Cormorant Garamond",Georgia,serif;--serif:"Mountains of Christmas",cursive;
+  --body-size:18px;--body-weight:600;--track:.01em;--logo-filter:invert(1) sepia(1) saturate(2.5) hue-rotate(-10deg) drop-shadow(0 0 6px #f6d878);
+  --page:linear-gradient(#06101f,#0a1a33 55%,#12305a);--head:#0b1a30;--glow:0 0 8px #5fd38d,0 0 22px rgba(95,211,141,.55);
+  --hero:radial-gradient(circle 300px at var(--mx,70%) var(--my,30%),rgba(214,40,57,.55),transparent 70%),linear-gradient(180deg,#0b1a3a 0%,#14406e 55%,#d62839 100%);
+  --hero-h1:linear-gradient(180deg,#fff7d6 0%,#f6d878 48%,#c9941a 52%,#f6d878 100%);--hero-em:linear-gradient(180deg,#fff 0%,#ff6b6b 50%,#d62839 100%);
+  --t2:linear-gradient(135deg,#d62839,#1f6b4a);--t3:linear-gradient(135deg,#1f6b4a,#0b3b2a);--band:linear-gradient(90deg,#d62839,#1f6b4a);
+  --hover:linear-gradient(160deg,#d62839,#1f6b4a);--q2:linear-gradient(160deg,#14406e,#6b1420);--nl:linear-gradient(135deg,#0b3b2a,#7a1520);
+  --ph1:#1f5a42,#3f9c74;--ph2:#8c1c28,#e0515f;--ph3:#a57a1a,#f6d878;--ph4:#1d4a7d,#5b93cf;
+  --leaf-a:#f6d878;--leaf-b:#5fd38d;--greeting:"Happy New Year";
+}
+
+/* ---------- page ---------- */
+html[data-theme]{color-scheme:dark;background:var(--page);background-attachment:fixed}
+html[data-theme] body{background:transparent;font-family:var(--body);font-size:var(--body-size);font-weight:var(--body-weight);line-height:1.4}
+html[data-theme] h1,html[data-theme] h2,html[data-theme] h3{letter-spacing:var(--track);font-weight:700}
+html[data-theme] :focus-visible{outline-color:var(--gold)}
+html[data-theme] .sh h2,html[data-theme] .page-h h1,html[data-theme] .ritual h2,html[data-theme] .nl h2,html[data-theme] .done h1,html[data-theme] .auth-box h1,html[data-theme] .pdi h1{color:#fff;text-shadow:3px 3px 0 var(--rose),6px 6px 0 var(--pu)}
+html[data-theme] .sh h2 em,html[data-theme] .page-h h1 em,html[data-theme] .ritual h2 em,html[data-theme] .nl h2 em,html[data-theme] .done h1 em,html[data-theme] .auth-box h1 em,html[data-theme] .acct-h h1 em{font-size:1em;color:var(--gold)}
+html[data-theme] .kick{color:var(--olive)}
+html[data-theme] .sprig>path{stroke:var(--olive)}
+html[data-theme] .sprig g{fill:var(--olive)}
+
+/* ---------- header + footer ---------- */
+html[data-theme] .promo{background:var(--band);color:#fff}
+html[data-theme] .promo b{color:var(--gold)}
+html[data-theme] header.nav,html[data-theme] header.nav.sc{background:var(--head);color:var(--ink);border-bottom:3px solid var(--rose);box-shadow:0 4px 0 var(--pu),0 10px 30px rgba(0,0,0,.5)}
+html[data-theme] .logo img,html[data-theme] .ft-g img{filter:var(--logo-filter)}
+html[data-theme] #bar{bottom:-3px;background:linear-gradient(90deg,var(--gold),var(--rose),var(--olive))}
+html[data-theme] .links a{font-family:var(--display);font-size:18px;letter-spacing:.03em;text-transform:uppercase}
+html[data-theme] .links a:hover,html[data-theme] .links a.cur{color:var(--olive);text-shadow:var(--glow)}
+html[data-theme] .links.open{background:var(--head)}
+html[data-theme] .ind{background:rgba(255,255,255,.08);border:2px solid var(--rose);border-radius:0}
+html[data-theme] .icon-btn{background:var(--card);color:var(--ink);border:2px solid var(--olive)}
+html[data-theme] .icon-btn:hover{background:var(--sage)}
+html[data-theme] .cart{background:var(--rose);color:#fff;border-radius:0;box-shadow:4px 4px 0 var(--olive);font-family:var(--display);letter-spacing:.03em;text-transform:uppercase}
+html[data-theme] .cart:hover{background:var(--rose);transform:translate(2px,2px);box-shadow:2px 2px 0 var(--olive)}
+html[data-theme] .cart i{background:var(--gold);color:var(--dark);border-radius:0}
+html[data-theme] footer.ft{background:var(--head);color:var(--ink);border-top:3px solid var(--olive);box-shadow:0 -6px 0 var(--pu)}
+html[data-theme] .ft-g a:hover{color:var(--olive)}
+
+/* ---------- buttons + inputs ---------- */
+html[data-theme] .btn{border-radius:0;background:var(--gold);color:var(--dark);font-family:var(--display);letter-spacing:.03em;text-transform:uppercase;box-shadow:5px 5px 0 var(--rose);transition:transform .15s,box-shadow .15s}
+html[data-theme] .btn:hover{transform:translate(3px,3px);box-shadow:2px 2px 0 var(--rose)}
+html[data-theme] .btn.dk{background:var(--olive);color:var(--dark);box-shadow:5px 5px 0 var(--pu)}
+html[data-theme] .btn.dk:hover{background:var(--olive);box-shadow:2px 2px 0 var(--pu)}
+html[data-theme] .btn.ro{background:var(--rose);color:#fff;box-shadow:5px 5px 0 var(--gold)}
+html[data-theme] .btn.ro:hover{background:var(--rose);box-shadow:2px 2px 0 var(--gold)}
+html[data-theme] .btn.gh,html[data-theme] .btn.ln{background:transparent;color:var(--ink);border:2px solid var(--ink);box-shadow:none}
+html[data-theme] .btn.gh{color:#fff;border-color:#fff}
+html[data-theme] .in,html[data-theme] select.in,html[data-theme] textarea.in{background:var(--dark);color:var(--ink);border:2px solid var(--olive);border-radius:0;font-family:var(--body)}
+html[data-theme] .in::placeholder{color:var(--mute);opacity:.8}
+html[data-theme] .in:focus{border-color:var(--rose);box-shadow:0 0 14px rgba(255,255,255,.2)}
+html[data-theme] .in[readonly]{opacity:.75}
+html[data-theme] select option{background:var(--dark);color:var(--ink)}
+html[data-theme] .arrows button{background:var(--dark);color:var(--rose);border:2px solid var(--rose);border-radius:0}
+html[data-theme] .arrows button:hover{background:var(--rose);color:#fff}
+html[data-theme] .chip{border:2px solid var(--line);border-radius:0;color:var(--ink)}
+html[data-theme] .chip.on{background:var(--olive);border-color:var(--olive);color:var(--dark)}
+html[data-theme] .chk input,html[data-theme] .dual input{accent-color:var(--olive)}
+html[data-theme] .pill{background:var(--sage);border-radius:0;color:var(--ink)}
+html[data-theme] .pill:hover{background:var(--rose);color:#fff}
+html[data-theme] .pill.clear{background:transparent}
+html[data-theme] .pill.clear:hover{background:transparent;color:var(--olive)}
+html[data-theme] .crumb,html[data-theme] .linkish{color:var(--olive)}
+
+/* ---------- hero ---------- */
+html[data-theme] .tile{border-radius:0;border:3px solid var(--olive);box-shadow:6px 6px 0 var(--rose)}
+html[data-theme] .main{background:var(--hero);border-color:var(--rose);box-shadow:6px 6px 0 var(--olive),0 0 30px rgba(0,0,0,.5);color:#fff}
+html[data-theme] .main .eyebrow{font-size:0;border-radius:0;background:rgba(0,0,0,.35);border:1px solid var(--gold)}
+html[data-theme] .main .eyebrow::before{content:var(--greeting);font-size:16px;color:var(--gold);font-family:var(--display);letter-spacing:.04em}
+html[data-theme] .main h1 .ln-m>span{background:var(--hero-h1);-webkit-background-clip:text;background-clip:text;color:transparent}
+html[data-theme] .main h1{filter:drop-shadow(3px 3px 0 var(--pu));letter-spacing:.02em;line-height:1}
+html[data-theme] .main h1 em{display:inline-block;font-family:var(--display);font-style:normal;font-size:1em;line-height:1;background:var(--hero-em);-webkit-background-clip:text;background-clip:text;color:transparent}
+html[data-theme] .main h1 .ln-m:nth-child(2)>span{background:none}
+html[data-theme] .t2{background:var(--t2);color:#fff}
+html[data-theme] .t3{background:var(--t3);color:#fff;border-color:var(--gold);box-shadow:6px 6px 0 var(--pu)}
+html[data-theme] .tile .big{text-shadow:3px 3px 0 rgba(0,0,0,.45);letter-spacing:.03em}
+html[data-theme] .tile small{opacity:1}
+html[data-theme] .wreath g:nth-of-type(odd) .lf path:first-child{fill:var(--leaf-a)}
+html[data-theme] .wreath g:nth-of-type(even) .lf path:first-child{fill:var(--leaf-b)}
+html[data-theme] .wreath circle{stroke:var(--gold)}
+html[data-theme] .stats b{color:var(--olive);text-shadow:var(--glow);letter-spacing:.03em}
+
+/* ---------- products ---------- */
+html[data-theme] .cat{background:var(--card);color:var(--ink);border:3px solid var(--olive);border-radius:0;box-shadow:4px 4px 0 var(--pu)}
+html[data-theme] .cat-Makeup{border-color:var(--rose)}
+html[data-theme] .cat-Hair{border-color:var(--gold)}
+html[data-theme] .cat-Fragrance{border-color:var(--mute)}
+html[data-theme] .cat.on{border-color:#fff;box-shadow:0 0 18px #fff,4px 4px 0 var(--rose)}
+html[data-theme] .cat b{font-size:24px}
+html[data-theme] .card{background:var(--card);border:2px solid var(--pu);border-radius:0}
+html[data-theme] .card:hover{border-color:var(--rose);box-shadow:7px 7px 0 var(--rose)}
+html[data-theme] .ph{border-bottom:2px solid var(--pu)}
+html[data-theme] .ph-Skincare{background:linear-gradient(145deg,var(--ph1))}
+html[data-theme] .ph-Makeup{background:linear-gradient(145deg,var(--ph2))}
+html[data-theme] .ph-Hair{background:linear-gradient(145deg,var(--ph3))}
+html[data-theme] .ph-Fragrance{background:linear-gradient(145deg,var(--ph4))}
+html[data-theme] .ci .thumb,html[data-theme] .gm{border-radius:0}
+html[data-theme] .tag{background:var(--gold);color:var(--dark);border-radius:0;left:0;font-style:normal}
+html[data-theme] .tag.sale{background:var(--rose);color:#fff}
+html[data-theme] .tag.out{background:#fff;color:var(--dark)}
+html[data-theme] .heart{background:var(--dark);border:2px solid var(--olive);border-radius:0}
+html[data-theme] .heart svg{stroke:var(--olive)}
+html[data-theme] .heart.on{background:var(--rose);border-color:var(--rose)}
+html[data-theme] .heart.on svg{fill:#fff;stroke:#fff}
+html[data-theme] .nm{font-family:var(--display);font-size:20px;line-height:1.15;letter-spacing:.02em;font-weight:700}
+html[data-theme] .br{color:var(--olive);letter-spacing:.1em}
+html[data-theme] .rt{color:var(--mute);font-size:14px}
+html[data-theme] .pr{color:var(--gold);font-size:19px}
+html[data-theme] .pr s{color:var(--mute)}
+html[data-theme] .add{background:var(--rose);color:#fff;border-radius:0;font-family:var(--display);font-size:15px;letter-spacing:.03em;text-transform:uppercase;box-shadow:3px 3px 0 var(--olive)}
+html[data-theme] .add:hover{background:var(--gold);color:var(--dark);transform:translate(2px,2px);box-shadow:1px 1px 0 var(--olive)}
+html[data-theme] .add[disabled]{background:var(--bg2);color:var(--mute);box-shadow:none}
+html[data-theme] .pp{color:var(--gold);letter-spacing:.02em}
+html[data-theme] .qs,html[data-theme] .ben div{border-radius:0;border:2px solid var(--line)}
+
+/* ---------- landing sections ---------- */
+html[data-theme] .ritual{background:var(--card);border:3px solid var(--gold);border-radius:0;box-shadow:8px 8px 0 var(--rose)}
+html[data-theme] .step .no{-webkit-text-stroke-color:var(--gold)}
+html[data-theme] .mq{background:var(--band);border-top:3px solid var(--gold);border-bottom:3px solid var(--olive)}
+html[data-theme] .bp{border:2px solid #fff;border-radius:0;color:#fff;text-shadow:2px 2px 0 var(--dark);text-transform:uppercase}
+html[data-theme] .bp:hover{background:var(--gold);border-color:var(--gold);color:var(--dark);text-shadow:none}
+html[data-theme] .w{background:var(--card);border:2px solid var(--olive);border-radius:0;box-shadow:5px 5px 0 var(--pu)}
+html[data-theme] .w:hover{background:var(--hover);color:#fff;border-color:#fff;box-shadow:8px 8px 0 var(--gold);transform:translate(-4px,-4px)}
+html[data-theme] .w:hover p{color:#fff}
+html[data-theme] .q{background:var(--card);border:2px solid var(--pu);border-radius:0;box-shadow:5px 5px 0 var(--olive)}
+html[data-theme] .q:nth-child(2){background:var(--q2);border-color:var(--rose);box-shadow:5px 5px 0 var(--gold)}
+html[data-theme] .q .st,html[data-theme] .q:nth-child(2) .st{color:var(--gold)}
+html[data-theme] .q p{font-family:var(--body);font-size:23px;line-height:1.2;letter-spacing:0}
+html[data-theme] .av i{background:var(--olive);color:var(--dark);border-radius:0}
+html[data-theme] .nl{background:var(--nl);border:3px solid var(--gold);border-radius:0;box-shadow:8px 8px 0 var(--rose)}
+html[data-theme] .nl p{color:var(--ink)!important}
+
+/* ---------- filters, cart, checkout, account ---------- */
+html[data-theme] .side,html[data-theme] .panel{background:var(--card);border:2px solid var(--pu);border-radius:0}
+html[data-theme] .ov{background:rgba(0,0,0,.6)}
+html[data-theme] .dr{background:var(--bg);border-left:3px solid var(--rose);border-radius:0}
+html[data-theme] .ship,html[data-theme] .payopt{background:var(--card);border-radius:0}
+html[data-theme] .payopt{border-color:var(--olive)}
+html[data-theme] .payopt svg,html[data-theme] .ben svg{color:var(--olive)}
+html[data-theme] .ship u{background:var(--olive)}
+html[data-theme] .qt button{background:var(--card);color:var(--ink);border-color:var(--olive)}
+html[data-theme] .qt button:hover{background:var(--rose);color:#fff}
+html[data-theme] .tot.g{color:var(--gold);letter-spacing:.02em}
+html[data-theme] .toast{background:var(--gold);color:var(--dark);border-radius:0;box-shadow:4px 4px 0 var(--rose)}
+html[data-theme] .tabs button[aria-selected=true]::after{background:var(--olive)}
+html[data-theme] .note{background:var(--sage);border:1px solid var(--line);border-radius:0}
+html[data-theme] .note a{color:var(--olive)}
+html[data-theme] .alert{border-radius:0}
+html[data-theme] .fld .err{color:#ff9aa8}
+html[data-theme] .fld.bad .in{border-color:#ff9aa8}
+html[data-theme] .auth-tabs{background:var(--dark);border-radius:0}
+html[data-theme] .auth-tabs button{border-radius:0}
+html[data-theme] .auth-tabs button[aria-selected=true]{background:var(--olive);color:var(--dark)}
+html[data-theme] .ord{border-radius:0;border:2px solid var(--line)}
+html[data-theme] .ord-t b{color:var(--gold)}
+html[data-theme] .done .num{background:var(--sage);border-radius:0;color:var(--gold)}
+html[data-theme] .done .wr .tick svg{color:var(--olive)}
+html[data-theme] .st{border-radius:0}
+
+/* ---------- Halloween decorations ---------- */
+html[data-theme=halloween]::after{content:"";position:fixed;inset:0;z-index:70;pointer-events:none;background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,.5))}
+html[data-theme=halloween] .main::before{content:"";position:absolute;right:30%;top:-50px;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fffbe6,#f5e6a8 60%,#d8c070);box-shadow:0 0 70px 24px rgba(255,230,150,.3);opacity:.85;z-index:0}
+html[data-theme=halloween] .main h1{animation:hw-flicker 5s infinite}
+@keyframes hw-flicker{0%,92%,100%{opacity:1}94%{opacity:.6}96%{opacity:1}98%{opacity:.7}}
+html[data-theme=halloween] .stage::before,html[data-theme=halloween] .stage::after{content:"";position:absolute;width:64px;height:32px;z-index:2;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 32'%3E%3Cpath fill='%230e0712' d='M32 12c-2-5-3-6-4-8-1 2-1 3-1 5-7-1-13-3-20-8 2 7 1 13-6 22 5-3 10-3 13 2 2-4 7-5 10-1 1-3 5-5 8-5s7 2 8 5c3-4 8-3 10 1 3-5 8-5 13-2-7-9-8-15-6-22-7 5-13 7-20 8 0-2 0-3-1-5-1 2-2 3-4 8z'/%3E%3C/svg%3E") center/contain no-repeat;animation:hw-bat 7s ease-in-out infinite}
+html[data-theme=halloween] .stage::before{left:0;top:6%}
+html[data-theme=halloween] .stage::after{right:0;top:60%;width:44px;height:22px;animation-delay:-3s}
+@keyframes hw-bat{50%{transform:translate(-22px,-18px) rotate(-8deg)}}
+
+/* ---------- New Year decorations: falling snow ---------- */
+html[data-theme=newyear]::after,html[data-theme=newyear]::before{content:"";position:fixed;inset:0;z-index:70;pointer-events:none}
+html[data-theme=newyear]::after{background-image:radial-gradient(3px 3px at 20px 30px,#fff,transparent),radial-gradient(2px 2px at 90px 80px,#fff,transparent),radial-gradient(4px 4px at 160px 20px,#fff,transparent),radial-gradient(2px 2px at 60px 140px,#fff,transparent),radial-gradient(3px 3px at 130px 110px,#fff,transparent),radial-gradient(2px 2px at 190px 170px,#fff,transparent);background-size:200px 200px;animation:ny-snow1 11s linear infinite;opacity:.7}
+html[data-theme=newyear]::before{background-image:radial-gradient(5px 5px at 40px 50px,#fff,transparent),radial-gradient(3px 3px at 150px 120px,#fff,transparent),radial-gradient(4px 4px at 240px 210px,#fff,transparent),radial-gradient(3px 3px at 90px 260px,#fff,transparent);background-size:300px 300px;animation:ny-snow2 18s linear infinite;opacity:.5}
+@keyframes ny-snow1{to{background-position:0 200px}}
+@keyframes ny-snow2{to{background-position:0 300px}}
+html[data-theme=newyear] .main::before{content:"";position:absolute;right:26%;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,240,180,.9),rgba(246,216,120,.25) 55%,transparent 70%);z-index:0}
+
+@media(max-width:900px){
+  html[data-theme] .q p{font-size:20px}
+  html[data-theme] .main h1{font-size:68px}
+  html[data-theme=halloween] .main::before{right:8%;top:-40px;width:110px;height:110px}
+  html[data-theme=halloween] .stage::before{display:none}
+}
