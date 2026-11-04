@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; base-uri 'self'; form-action 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alola | Cosmetics Store</title>
+<meta name="description" content="Skincare, makeup, hair and fragrance from the brands you trust, delivered across Egypt.">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/store.css">
+</head>
+<body>
+<main>
+<div class="wrap">
+  <div class="bento">
+    <div class="tile main" id="hero">
+      <span class="eyebrow">Delivered across Egypt</span>
+      <div class="stage" id="stage"><div class="par" data-depth="10" id="stageWreath"></div><div class="par" data-depth="26"><div class="hero-pack" id="heroPack"></div></div></div>
+      <h1><span class="ln-m"><span>Glow</span></span><span class="ln-m"><span><em>loud.</em></span></span></h1>
+      <p>Skincare, makeup, hair and fragrance from the brands you trust. Real stock, real prices.</p>
+      <div class="acts"><a class="btn" href="shop.html">Shop now <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg></a><a class="btn gh" href="#ritual">The ritual</a></div>
+    </div>
+    <div class="tile t2"><div class="big">24h</div><small>Cairo delivery, 3 days nationwide</small><div class="tile-art" id="artT2"></div></div>
+    <div class="tile t3"><div class="big">COD</div><small>Pay in cash when it arrives</small><div class="tile-art" id="artT3"></div></div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <section id="featured">
+    <div class="sh rev">
+      <div><div class="kick" data-sprig>Handpicked</div><h2>Featured <em>favourites</em></h2><p>Tap a category to browse.</p></div>
+      <div class="arrows"><button id="prev" aria-label="Previous products"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H4M10 6l-6 6 6 6"/></svg></button><button id="next" aria-label="Next products"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg></button></div>
+    </div>
+    <div class="cats rev" id="cats"></div>
+    <div class="rail" id="rail" tabindex="0" aria-label="Featured products"></div>
+    <div style="text-align:center"><a class="btn dk" href="shop.html" id="allBtn">Browse all products</a></div>
+  </section>
+</div>
+
+<div class="wrap" id="ritualWrap" hidden>
+  <div class="ritual" id="ritual">
+    <div class="pin"><div class="kick" data-sprig>Your routine</div><h2>A ritual in <em>three steps</em></h2><p>Good skin doesn’t need twelve products. It needs the right three, every morning.</p><div class="r-stage" id="rStage"></div></div>
+    <div class="steps" id="rSteps"></div>
+  </div>
+</div>
+
+<section id="brands" style="padding-bottom:24px">
+  <div class="wrap"><div class="sh rev"><div><div class="kick" data-sprig>Official brands</div><h2>Trusted by <em>top brands</em></h2><p>100% authentic, sourced from brand distributors. Tap a name to shop it.</p></div></div></div>
+  <div class="mq"><div class="tr" id="marquee"></div></div>
+</section>
+
+<div class="wrap">
+  <section id="why" style="padding-top:20px">
+    <div class="sh rev"><div><div class="kick" data-sprig>The basics, done properly</div><h2>Why <em>Alola</em></h2></div></div>
+    <div class="why">
+      <div class="w rev"><b>01</b><h3>Live stock</h3><p>If it’s on the site, it’s on our shelf.</p></div>
+      <div class="w rev"><b>02</b><h3>Fast delivery</h3><p>Cairo in 24 hours, nationwide in 3 days.</p></div>
+      <div class="w rev"><b>03</b><h3>Cash on delivery</h3><p>Pay when it arrives, not before.</p></div>
+      <div class="w rev"><b>04</b><h3>100% authentic</h3><p>Sourced straight from brand distributors.</p></div>
+    </div>
+  </section>
+
+  <section id="reviews">
+    <div class="sh rev"><div><div class="kick" data-sprig>Reviews</div><h2>Loved by <em>customers</em></h2></div></div>
+    <div class="rv">
+      <div class="q rev"><div class="st" aria-label="5 out of 5 stars">★★★★★</div><p>“The serum arrived in two days and the packaging was perfect.”</p><div class="av"><i>M</i>Mona, Cairo</div></div>
+      <div class="q rev"><div class="st" aria-label="5 out of 5 stars">★★★★★</div><p>“Finally a store where in-stock actually means in stock.”</p><div class="av"><i>N</i>Nour, Alexandria</div></div>
+      <div class="q rev"><div class="st" aria-label="5 out of 5 stars">★★★★★</div><p>“Found my exact foundation shade. Will order again.”</p><div class="av"><i>S</i>Salma, Mansoura</div></div>
+    </div>
+  </section>
+
+  <div class="nl rev">
+    <div><h2>Join the <em>glow list</em></h2><p style="color:var(--mute);margin-top:8px">Early access to new arrivals and offers.</p></div>
+    <form id="newsletter"><label class="sr" for="nlEmail">Email address</label><input class="in" id="nlEmail" type="email" placeholder="Your email" required autocomplete="email"><button class="btn ro">Subscribe</button></form>
+  </div>
+</div>
+</main>
+<script src="js/config.js"></script>
+<script src="js/art.js"></script>
+<script src="js/common.js"></script>
+<script src="js/home.js"></script>
+</body>
+</html>

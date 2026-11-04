@@ -1,0 +1,13 @@
+{
+  "name": "alola-store",
+  "version": "2.0.0",
+  "description": "Alola cosmetics store and admin dashboard. Static site on GitHub Pages with Supabase for data, login and live notifications.",
+  "private": true,
+  "scripts": {
+    "start": "node scripts/serve.js",
+    "test": "node --test test/database.test.js"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.15"
+  }
+}
