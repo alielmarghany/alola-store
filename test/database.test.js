@@ -10,6 +10,8 @@ const { PGlite } = require('@electric-sql/pglite');
 const ADMIN = '11111111-1111-1111-1111-111111111111';
 const STRANGER = '22222222-2222-2222-2222-222222222222';
 const sql = f => fs.readFileSync(path.join(__dirname, '..', 'supabase', f), 'utf8');
+const SHOPPER_A = '33333333-3333-3333-3333-333333333333';
+const SHOPPER_B = '44444444-4444-4444-4444-444444444444';
 let db;
 
 /** Runs a query as anon (no uid) or as a signed-in user, the way PostgREST would. */
@@ -30,6 +32,7 @@ before(async () => {
   await db.exec(`
     create role anon; create role authenticated;
     create schema auth;
+    create table auth.users (id uuid primary key, email text);
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
     grant usage on schema auth to anon, authenticated; grant execute on function auth.uid() to anon, authenticated;
     grant usage on schema public to anon, authenticated;
@@ -45,6 +48,7 @@ before(async () => {
   await db.exec(sql('schema.sql'));
   await db.exec(sql('seed.sql'));
   await db.query('insert into admins values ($1)', [ADMIN]);
+  await db.query("insert into auth.users values ($1,'shopper.a@test.local'),($2,'shopper.b@test.local')", [SHOPPER_A, SHOPPER_B]);
 });
 
 test('shoppers see the 8 live products', async () => {
@@ -197,6 +201,48 @@ test('order flood is limited per visitor', async () => {
   await db.query('delete from order_attempts');
   for (let i = 0; i < 20; i++) await order({ items: [{ id: Number(p.id), qty: 1 }] });
   await assert.rejects(order({ items: [{ id: Number(p.id), qty: 1 }] }), /Too many orders/);
+});
+
+test('logged-in orders are saved to the account, use its email, and save details on request', async () => {
+  await db.query('delete from order_attempts');
+  const a = (t, p) => as('authenticated', SHOPPER_A, t, p);
+  const p = await one(anon("select * from products where art='jar'"));
+  const payload = { ...buyer, email: 'someone.else@test.local', save: true, items: [{ id: Number(p.id), qty: 1 }] };
+  const r = (await one(a('select place_order($1::jsonb) r', [JSON.stringify(payload)]))).r;
+  const mine = (await one(a('select my_orders() r'))).r;
+  assert.equal(mine.length, 1);
+  assert.equal(mine[0].number, r.number);
+  assert.equal(mine[0].items[0].name, p.name);
+  assert.equal((await db.query('select email from orders where id=$1', [Number(r.number.replace('ALO-', '')) - 10000])).rows[0].email, 'shopper.a@test.local');
+  const saved = await one(a('select * from customer_profiles'));
+  assert.equal(saved.address, buyer.address);
+
+  // Without "save", saved details stay as they were.
+  await a('select place_order($1::jsonb) r', [JSON.stringify({ ...payload, address: 'Another Address 22', save: false })]);
+  assert.equal((await one(a('select address from customer_profiles'))).address, buyer.address);
+  assert.equal((await one(a('select my_orders() r'))).r.length, 2);
+});
+
+test('customers can only reach their own details and orders', async () => {
+  const b = (t, p) => as('authenticated', SHOPPER_B, t, p);
+  assert.equal((await one(b('select my_orders() r'))).r.length, 0);
+  assert.equal((await b('select * from customer_profiles')).length, 0);
+  assert.equal((await b('update customer_profiles set address=$1 returning user_id', ['Hacked Street 1'])).length, 0);
+  await assert.rejects(b('insert into customer_profiles (user_id,name) values ($1,$2)', [SHOPPER_A, 'Hacked']), /row-level security|duplicate key/);
+  await b('insert into customer_profiles (user_id,name) values ($1,$2)', [SHOPPER_B, 'Shopper B']);
+  assert.equal((await b('select name from customer_profiles')).length, 1);
+  await assert.rejects(b('delete from customer_profiles'), /permission denied/);
+  await assert.rejects(anon('select my_orders()'), /permission denied/);
+  await assert.rejects(anon('select * from customer_profiles'), /permission denied/);
+  await assert.rejects(b('select admin_analytics()'), /Not authorised/);
+  await assert.rejects(b('select * from orders'), /permission denied/);
+});
+
+test('guest orders are not linked to an account with the same email', async () => {
+  await db.query('delete from order_attempts');
+  const p = await one(anon("select * from products where art='lipstick'"));
+  await order({ email: 'shopper.b@test.local', items: [{ id: Number(p.id), qty: 1 }] });
+  assert.equal((await one(as('authenticated', SHOPPER_B, 'select my_orders() r'))).r.length, 0);
 });
 
 test('clearing sample data leaves real clients and products', async () => {

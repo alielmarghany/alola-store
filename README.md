@@ -8,6 +8,8 @@ A cosmetics store and admin dashboard. The site is static files hosted on **GitH
 
 **Store:** landing page, all-products page with search and filters, product pages, cart, and cash-on-delivery checkout.
 
+**Customer accounts:** sign up and log in, saved name, phone and delivery address filled in at checkout, order history with status, and password change and reset. Guest checkout still works. No card details are collected or stored.
+
 **Dashboard (`/admin/`):**
 - Revenue per day and per month, orders, number of clients, top products and low stock
 - Orders: search, view details and change status
@@ -40,14 +42,23 @@ The public key in `public/js/config.js` is safe to publish. Access rules in `sup
    insert into admins (user_id)
    select id from auth.users where email = 'you@example.com';
    ```
-6. Under **Authentication > Sign In / Providers**, turn off **Allow new users to sign up**. Sign-ups wouldn't get dashboard access anyway, but there's no reason to allow them.
-7. Copy the **Project URL** and **anon public** key into `public/js/config.js`.
+6. Leave **Allow new users to sign up** on, since customers need it. New accounts get no dashboard access unless they're added to `admins`.
+7. Under **Authentication > URL Configuration**, set **Site URL** to your live site, and add `https://YOUR-USERNAME.github.io/YOUR-REPO/account.html` to **Redirect URLs**. Otherwise links in confirmation and reset emails go to the wrong place.
+8. Set up email (see **Customer account emails** below).
+9. Copy the **Project URL** and **anon public** key into `public/js/config.js`.
 
 ### 2. GitHub Pages
 
 1. Push this repo to GitHub. Pages on a free account needs a public repo.
 2. Under **Settings > Pages**, set **Source** to **GitHub Actions**.
 3. Each push to `main` runs the tests and deploys the `public` folder.
+
+## Customer account emails
+
+Supabase's built-in email sender only delivers to your own Supabase team members, and only a few per hour. That means customers won't receive sign-up confirmation or password reset emails from it.
+
+- **For testing:** turn off **Confirm email** under **Authentication > Sign In / Providers**. Customers can then sign up and log in straight away, but password reset emails still won't reach them.
+- **For launch:** add a mail service such as Resend or Brevo under **Authentication > SMTP Settings**, then turn **Confirm email** back on.
 
 ## Run it locally
 

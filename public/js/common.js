@@ -7,6 +7,7 @@ window.A = (function () {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const ICON = {
+    user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.500-6 8-6s8 2 8 6"/></svg>',
     search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
     menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
     close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
@@ -20,6 +21,7 @@ window.A = (function () {
   };
 
   // ------------------------------------------------ API
+  const GOVERNORATES = ['Cairo', 'Giza', 'Alexandria', 'Aswan', 'Asyut', 'Beheira', 'Beni Suef', 'Dakahlia', 'Damietta', 'Faiyum', 'Gharbia', 'Ismailia', 'Kafr El Sheikh', 'Luxor', 'Matrouh', 'Minya', 'Monufia', 'New Valley', 'North Sinai', 'Port Said', 'Qalyubia', 'Qena', 'Red Sea', 'Sharqia', 'Sohag', 'South Sinai', 'Suez'];
   const CFG = window.ALOLA_CONFIG || {};
   async function rest(path, opts = {}) {
     if (!CFG.url) throw new Error('The store isn’t connected to Supabase yet');
@@ -36,7 +38,6 @@ window.A = (function () {
   let productsP, configP;
   const products = () => (productsP ||= rest('products?select=*&active=eq.true&order=featured.desc,id'));
   const config = () => (configP ||= rest('store_settings?select=*').then(r => ({ shippingFee: r[0].shipping_fee, freeShippingOver: r[0].free_shipping_over })));
-  const placeOrder = payload => rpc('place_order', { payload });
   const subscribe = email => rpc('subscribe', { p_email: email });
 
   // ------------------------------------------------ storage (the browser may refuse it: never let that break the page)
@@ -163,6 +164,7 @@ window.A = (function () {
         <a href="shop.html"${active === 'shop' ? ' class="cur"' : ''}>All products</a><a href="${home}#featured">Featured</a><a href="${home}#brands">Brands</a><a href="${home}#why">Why Alola</a><a href="${home}#reviews">Reviews</a></nav>
       <div class="nav-r">
         <a class="icon-btn" href="shop.html?focus=1" aria-label="Search products">${ICON.search}</a>
+        <a class="icon-btn" href="account.html" aria-label="My account"${active === 'account' ? ' aria-current="page"' : ''}>${ICON.user}</a>
         <button class="cart" id="cartBtn" aria-label="Open cart"><span class="lbl">Cart</span> <i class="cart-count">0</i></button>
         <button class="icon-btn burger" id="burger" aria-label="Menu" aria-expanded="false">${ICON.menu}</button>
       </div></header>`;
@@ -172,7 +174,7 @@ window.A = (function () {
     tail.innerHTML = `<footer class="ft"><div class="ft-g">
         <div><img src="assets/logo.png" alt="Alola" width="122" height="44"><p>Skincare, makeup, hair and fragrance from brands you trust, delivered across Egypt.</p></div>
         <div><h4>Shop</h4><a href="shop.html">All products</a><a href="shop.html?category=Skincare">Skincare</a><a href="shop.html?category=Makeup">Makeup</a><a href="shop.html?category=Hair">Hair</a><a href="shop.html?category=Fragrance">Fragrance</a></div>
-        <div><h4>Store</h4><a href="./#why">Why Alola</a><a href="./#brands">Brands</a><a href="./#reviews">Reviews</a></div>
+        <div><h4>Store</h4><a href="account.html">My account</a><a href="./#why">Why Alola</a><a href="./#brands">Brands</a><a href="./#reviews">Reviews</a></div>
         <div><h4>Staff</h4><a href="admin/">Admin dashboard</a></div>
       </div><div class="ft-b"><span>© ${new Date().getFullYear()} Alola Cosmetics</span><span>Prices include VAT · Cash on delivery</span></div></footer>
       <div class="ov" id="overlay"></div>
@@ -262,5 +264,5 @@ window.A = (function () {
     requestAnimationFrame(f);
   }
 
-  return { $, $$, esc, fmt, products, config, placeOrder, subscribe, media, card, rating, price, url, tagHtml, saved, getCart, setCart, addToCart, cartLines, totals, openCart, flyToCart, toast, mountChrome, reveal, renderCart, ICON, reduced };
+  return { $, $$, esc, fmt, products, config, subscribe, GOVERNORATES, media, card, rating, price, url, tagHtml, saved, getCart, setCart, addToCart, cartLines, totals, openCart, flyToCart, toast, mountChrome, reveal, renderCart, ICON, reduced };
 })();
