@@ -262,6 +262,13 @@ test('only admins can switch the store theme, and everyone can read it', async (
   assert.equal(await read(), 'default');
 });
 
+test('every update and delete in a function has a where clause, which Supabase requires', () => {
+  // Supabase's safeupdate rule rejects these for website requests, and the local test database doesn't enforce it.
+  const writes = sql('schema.sql').match(/\b(?:update\s+\w+\s+set|delete\s+from\s+\w+)\b[^;]*;/gi);
+  assert.ok(writes.length >= 6, 'expected to find the update and delete statements');
+  for (const stmt of writes) assert.match(stmt, /\bwhere\b/i, stmt);
+});
+
 test('clearing sample data leaves real clients and products', async () => {
   await db.exec(sql('clear-sample-data.sql'));
   assert.equal((await db.query("select * from customers where email like '%@example.com'")).rows.length, 0);
