@@ -1,9 +1,11 @@
 // Applies the store theme the admin picked. Loaded in <head> so the saved theme shows before first paint.
-// Add ?theme=halloween (or newyear, default) to a URL to preview a theme on that page without changing the live site.
+// Add ?theme=halloween (or newyear, ramadan, eid, default) to a URL to preview a theme on that page without changing the live site.
 (function () {
   const FONTS = {
     newyear: 'family=Mountains+of+Christmas:wght@400;700&family=Cormorant+Garamond:wght@500;600;700',
     halloween: 'family=Creepster&family=IM+Fell+English',
+    ramadan: 'family=Cinzel+Decorative:wght@400;700;900&family=Amiri:wght@400;700',
+    eid: 'family=El+Messiri:wght@500;700&family=Cairo:wght@400;600;700',
   };
   const KEY = 'alola_theme';
   const cached = () => { try { return localStorage.getItem(KEY); } catch { return null; } };

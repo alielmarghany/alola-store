@@ -255,8 +255,10 @@ test('only admins can switch the store theme, and everyone can read it', async (
   assert.equal(await read(), 'default');
   await admin("select admin_set_theme('halloween')");
   assert.equal(await read(), 'halloween');
-  await admin("select admin_set_theme('newyear')");
-  assert.equal(await read(), 'newyear');
+  for (const theme of ['newyear', 'ramadan', 'eid']) {
+    await admin('select admin_set_theme($1)', [theme]);
+    assert.equal(await read(), theme);
+  }
   await assert.rejects(admin("select admin_set_theme('nope')"), /Unknown theme/);
   await admin("select admin_set_theme('default')");
   assert.equal(await read(), 'default');

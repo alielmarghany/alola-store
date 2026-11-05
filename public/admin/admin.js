@@ -506,6 +506,8 @@
     { id: 'default', name: 'Alola', note: 'The everyday store look.', colors: ['#f6f2e9', '#66794a', '#3b261d', '#c4687c', '#e9d3a6'], bg: 'linear-gradient(135deg,#66794a,#3f4f2c)', ink: '#fff', font: '"Bricolage Grotesque",sans-serif', fontName: 'Bricolage Grotesque + DM Sans' },
     { id: 'newyear', name: 'New Year', note: 'Midnight blue, gold and falling snow.', colors: ['#06101f', '#f6d878', '#d62839', '#5fd38d', '#14406e'], bg: 'linear-gradient(180deg,#0b1a3a,#14406e 55%,#d62839)', ink: '#f6d878', font: '"Mountains of Christmas",cursive', fontName: 'Mountains of Christmas + Cormorant Garamond' },
     { id: 'halloween', name: 'Halloween', note: 'Pumpkin orange, purple, a full moon and bats.', colors: ['#0e0712', '#ff7a00', '#8a3fd1', '#9dff3a', '#ffc533'], bg: 'linear-gradient(180deg,#14081f,#3b1060 55%,#ff7a00)', ink: '#ffc533', font: '"Creepster",cursive', fontName: 'Creepster + IM Fell English' },
+    { id: 'ramadan', name: 'Ramadan', note: 'Deep teal and gold, a crescent, a lantern and geometric patterns.', colors: ['#05161f', '#e8c766', '#0f8a6a', '#1e5a8a', '#fdf6e3'], bg: 'linear-gradient(180deg,#041f1c,#0b4a3d 55%,#0f8a6a)', ink: '#f6d878', font: '"Cinzel Decorative",serif', fontName: 'Cinzel Decorative + Amiri' },
+    { id: 'eid', name: 'Eid', note: 'Royal purple, pink and gold, with balloons and confetti.', colors: ['#1a0b2e', '#e8478b', '#ffd166', '#3ddbd0', '#7a3fc4'], bg: 'linear-gradient(170deg,#3a1570,#a12a86 60%,#e8478b)', ink: '#ffd166', font: '"El Messiri",serif', fontName: 'El Messiri + Cairo' },
   ];
   async function viewThemes(el, token) {
     el.innerHTML = '<div class="skeleton" style="height:320px"></div>';
@@ -513,7 +515,7 @@
     if (!$('#themeFonts')) {
       const l = document.createElement('link');
       l.id = 'themeFonts'; l.rel = 'stylesheet';
-      l.href = 'https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Creepster&display=swap';
+      l.href = 'https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Creepster&family=Cinzel+Decorative:wght@700&family=El+Messiri:wght@700&display=swap';
       document.head.append(l);
     }
     let active;

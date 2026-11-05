@@ -1,4 +1,5 @@
-/* Seasonal store themes, based on the Alola Halloween and New Year designs.
+@charset "utf-8";
+/* Seasonal store themes, based on the Alola Halloween, New Year and Ramadan designs, plus an Eid theme.
    Each theme sets its palette and fonts as variables; the shared rules below apply them.
    With no data-theme on <html>, none of this file applies and the store keeps its normal look. */
 
@@ -27,6 +28,33 @@ html[data-theme=newyear]{
   --hover:linear-gradient(160deg,#d62839,#1f6b4a);--q2:linear-gradient(160deg,#14406e,#6b1420);--nl:linear-gradient(135deg,#0b3b2a,#7a1520);
   --ph1:#1f5a42,#3f9c74;--ph2:#8c1c28,#e0515f;--ph3:#a57a1a,#f6d878;--ph4:#1d4a7d,#5b93cf;
   --leaf-a:#f6d878;--leaf-b:#5fd38d;--greeting:"Happy New Year";
+}
+
+html[data-theme=ramadan]{
+  --bg:#05161f;--bg2:#143a48;--card:#0c2733;--ink:#fdf6e3;--mute:#a9c4c0;--olive:#e8c766;--olive2:#e8c766;--sage:#123a45;
+  --rose:#0f8a6a;--rose2:#0b6e54;--blush:#0b4a3d;--gold:#f6d878;--sand:#f6d878;--line:rgba(232,199,102,.28);--pu:#1e5a8a;--dark:#05161f;
+  --display:"Cinzel Decorative",Georgia,serif;--body:"Amiri",Georgia,serif;--serif:"Cinzel Decorative",Georgia,serif;
+  --body-size:18px;--body-weight:400;--track:.01em;--logo-filter:invert(1) sepia(1) saturate(2.5) hue-rotate(-5deg) drop-shadow(0 0 6px #e8c766);
+  --page:linear-gradient(#05161f,#062230 55%,#0b3d4a);--head:#071d28;--glow:0 0 8px #e8c766,0 0 22px rgba(232,199,102,.55);
+  --hero:radial-gradient(circle 300px at var(--mx,70%) var(--my,30%),rgba(15,138,106,.55),transparent 70%),linear-gradient(180deg,#041f1c 0%,#0b4a3d 55%,#0f8a6a 100%);
+  --hero-h1:linear-gradient(180deg,#fff7d6 0%,#f6d878 48%,#c9941a 52%,#f6d878 100%);--hero-em:linear-gradient(180deg,#fff 0%,#5fe0b8 50%,#0f8a6a 100%);
+  --t2:linear-gradient(135deg,#0f8a6a,#1e5a8a);--t3:linear-gradient(135deg,#b8862a,#6b4a10);--band:linear-gradient(90deg,#0f8a6a,#1e5a8a);
+  --hover:linear-gradient(160deg,#0f8a6a,#1e5a8a);--q2:linear-gradient(160deg,#0b4a3d,#14507a);--nl:linear-gradient(135deg,#0b3d4a,#0f6a56);
+  --ph1:#0f5c50,#23a385;--ph2:#7a5a14,#d3a53a;--ph3:#1e5a8a,#4f93c8;--ph4:#4a3a7a,#8f76c9;
+  --leaf-a:#f6d878;--leaf-b:#5fe0b8;--greeting:"رمضان كريم";--greeting-font:"Amiri",serif;
+}
+html[data-theme=eid]{
+  --bg:#1a0b2e;--bg2:#3a2158;--card:#2a1445;--ink:#fff6ee;--mute:#d3bfe6;--olive:#3ddbd0;--olive2:#3ddbd0;--sage:#3a1f5c;
+  --rose:#e8478b;--rose2:#c9306f;--blush:#5b1f6e;--gold:#ffd166;--sand:#ffd166;--line:rgba(255,209,102,.3);--pu:#7a3fc4;--dark:#1a0b2e;
+  --display:"El Messiri",Georgia,serif;--body:"Cairo",system-ui,sans-serif;--serif:"El Messiri",Georgia,serif;
+  --body-size:15.500px;--body-weight:400;--track:0;--logo-filter:invert(1) sepia(1) saturate(3) hue-rotate(-12deg) drop-shadow(0 0 6px #ffd166);
+  --page:linear-gradient(#1a0b2e,#2c1149 55%,#4a1660);--head:#22103a;--glow:0 0 8px #ffd166,0 0 22px rgba(255,209,102,.5);
+  --hero:radial-gradient(circle 300px at var(--mx,70%) var(--my,30%),rgba(255,209,102,.4),transparent 70%),linear-gradient(170deg,#3a1570 0%,#a12a86 60%,#e8478b 100%);
+  --hero-h1:linear-gradient(180deg,#fff 0%,#ffe9a8 50%,#ffd166 100%);--hero-em:linear-gradient(180deg,#fff 0%,#a8fff6 55%,#3ddbd0 100%);
+  --t2:linear-gradient(135deg,#e8478b,#7a3fc4);--t3:linear-gradient(135deg,#0f8f8a,#3a1570);--band:linear-gradient(90deg,#e8478b,#7a3fc4,#0f8f8a);
+  --hover:linear-gradient(160deg,#e8478b,#7a3fc4);--q2:linear-gradient(160deg,#5b1f6e,#a12a6e);--nl:linear-gradient(135deg,#3a1570,#a12a6e);
+  --ph1:#5b2a86,#9a5cd0;--ph2:#b52a6e,#f07aa8;--ph3:#0f7f7a,#3ddbd0;--ph4:#a8741a,#ffd166;
+  --leaf-a:#ffd166;--leaf-b:#3ddbd0;--greeting:"عيد مبارك";--greeting-font:"El Messiri",serif;
 }
 
 /* ---------- page ---------- */
@@ -87,7 +115,7 @@ html[data-theme] .crumb,html[data-theme] .linkish{color:var(--olive)}
 html[data-theme] .tile{border-radius:0;border:3px solid var(--olive);box-shadow:6px 6px 0 var(--rose)}
 html[data-theme] .main{background:var(--hero);border-color:var(--rose);box-shadow:6px 6px 0 var(--olive),0 0 30px rgba(0,0,0,.5);color:#fff}
 html[data-theme] .main .eyebrow{font-size:0;border-radius:0;background:rgba(0,0,0,.35);border:1px solid var(--gold)}
-html[data-theme] .main .eyebrow::before{content:var(--greeting);font-size:16px;color:var(--gold);font-family:var(--display);letter-spacing:.04em}
+html[data-theme] .main .eyebrow::before{content:var(--greeting);font-size:16px;color:var(--gold);font-family:var(--greeting-font,var(--display));letter-spacing:.04em}
 html[data-theme] .main h1 .ln-m>span{background:var(--hero-h1);-webkit-background-clip:text;background-clip:text;color:transparent}
 html[data-theme] .main h1{filter:drop-shadow(3px 3px 0 var(--pu));letter-spacing:.02em;line-height:1}
 html[data-theme] .main h1 em{display:inline-block;font-family:var(--display);font-style:normal;font-size:1em;line-height:1;background:var(--hero-em);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -196,7 +224,54 @@ html[data-theme=newyear]::before{background-image:radial-gradient(5px 5px at 40p
 @keyframes ny-snow2{to{background-position:0 300px}}
 html[data-theme=newyear] .main::before{content:"";position:absolute;right:26%;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,240,180,.9),rgba(246,216,120,.25) 55%,transparent 70%);z-index:0}
 
+/* ---------- Ramadan decorations: geometric pattern, crescent, lanterns ---------- */
+html[data-theme=ramadan]::after{content:"";position:fixed;inset:0;z-index:70;pointer-events:none;background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,.42))}
+html[data-theme=ramadan] body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cg fill='none' stroke='%23e8c766' stroke-opacity='.18' stroke-width='1.2'%3E%3Crect x='22' y='22' width='46' height='46'/%3E%3Crect x='22' y='22' width='46' height='46' transform='rotate(45 45 45)'/%3E%3Ccircle cx='45' cy='45' r='10'/%3E%3Cpath d='M0 45h12M78 45h12M45 0v12M45 78v12'/%3E%3C/g%3E%3C/svg%3E");background-size:90px 90px}
+html[data-theme=ramadan] h1,html[data-theme=ramadan] h2,html[data-theme=ramadan] h3{text-transform:uppercase}
+html[data-theme=ramadan] .main h1{font-size:clamp(46px,6.2vw,84px);letter-spacing:0}
+html[data-theme=ramadan] .sh h2,html[data-theme=ramadan] .page-h h1,html[data-theme=ramadan] .ritual h2,html[data-theme=ramadan] .nl h2,html[data-theme=ramadan] .done h1,html[data-theme=ramadan] .auth-box h1,html[data-theme=ramadan] .pdi h1{text-shadow:2px 2px 0 var(--rose)}
+html[data-theme=ramadan] .sh h2{font-size:clamp(28px,3.6vw,44px)}
+html[data-theme=ramadan] .page-h h1{font-size:clamp(32px,4.6vw,58px)}
+html[data-theme=ramadan] .pdi h1{font-size:clamp(26px,3.2vw,40px);line-height:1.1}
+html[data-theme=ramadan] .links a,html[data-theme=ramadan] .cart,html[data-theme=ramadan] .btn,html[data-theme=ramadan] .add{font-weight:700;letter-spacing:0}
+html[data-theme=ramadan] .links a{font-size:13px}
+html[data-theme=ramadan] .btn{font-size:14px}
+html[data-theme=ramadan] .add{font-size:11px}
+html[data-theme=ramadan] .cart{font-size:13px}
+html[data-theme=ramadan] .nm{font-size:15px;line-height:1.25;text-transform:none;letter-spacing:0}
+html[data-theme=ramadan] .cat b,html[data-theme=ramadan] .w h3,html[data-theme=ramadan] .step h3{font-size:18px}
+html[data-theme=ramadan] .tile .big{font-size:44px}
+html[data-theme=ramadan] .stats b{font-size:32px}
+html[data-theme=ramadan] .bp{font-size:18px;letter-spacing:0}
+html[data-theme=ramadan] .main::before{content:"";position:absolute;right:-70px;top:-70px;width:380px;height:380px;z-index:0;opacity:.3;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%23e8c766' stroke-width='.9'%3E%3Crect x='20' y='20' width='60' height='60'/%3E%3Crect x='20' y='20' width='60' height='60' transform='rotate(45 50 50)'/%3E%3Ccircle cx='50' cy='50' r='14'/%3E%3Ccircle cx='50' cy='50' r='34'/%3E%3Ccircle cx='50' cy='50' r='46'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat}
+html[data-theme=ramadan] .main::after{content:"";position:absolute;top:0;left:46%;width:46px;height:128px;z-index:2;pointer-events:none;transform-origin:top center;animation:rm-swing 5s ease-in-out infinite;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 46 128'%3E%3Cpath d='M23 0v50' stroke='%23f6d878' stroke-width='1.500'/%3E%3Cpath d='M15 50h16l3 7H12z' fill='%23e8c766'/%3E%3Cpath d='M12 57h22l5 14-5 26H12L7 71z' fill='%23ffcf5c' fill-opacity='.9' stroke='%23b8862a' stroke-width='1.500'/%3E%3Cpath d='M23 57v40M7 71h32M12 97l-5-26M34 97l5-26' stroke='%23b8862a' stroke-width='1' fill='none'/%3E%3Cpath d='M12 97h22l-3 7H15z' fill='%23e8c766'/%3E%3Ccircle cx='23' cy='110' r='3' fill='%23e8c766'/%3E%3C/svg%3E") top center/contain no-repeat;filter:drop-shadow(0 0 14px rgba(255,207,92,.7))}
+@keyframes rm-swing{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+html[data-theme=ramadan] .stage::before{content:"";position:absolute;right:2%;top:-4%;width:92px;height:92px;z-index:2;animation:floaty 7s ease-in-out infinite;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M70 18A40 40 0 1 0 70 82A32 32 0 1 1 70 18z' fill='%23f6d878'/%3E%3Cpath d='M78 34l3.500 10 10.500.3-8.400 6.300 3 10-8.600-6-8.600 6 3-10-8.400-6.300 10.500-.3z' fill='%23fff7d6'/%3E%3C/svg%3E") center/contain no-repeat;filter:drop-shadow(0 0 16px rgba(246,216,120,.6))}
+
+/* ---------- Eid decorations: confetti, crescent, balloons ---------- */
+html[data-theme=eid]::before{content:"";position:fixed;inset:0;z-index:70;pointer-events:none;opacity:.6;animation:eid-fall 16s linear infinite;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Crect x='24' y='30' width='7' height='12' rx='1' fill='%23ffd166' transform='rotate(25 27 36)'/%3E%3Crect x='130' y='14' width='6' height='11' rx='1' fill='%233ddbd0' transform='rotate(-30 133 20)'/%3E%3Crect x='226' y='66' width='7' height='12' rx='1' fill='%23ff8fbf' transform='rotate(50 229 72)'/%3E%3Ccircle cx='82' cy='112' r='3.500' fill='%23ffd166'/%3E%3Crect x='176' y='142' width='6' height='11' rx='1' fill='%23ffd166' transform='rotate(-40 179 147)'/%3E%3Crect x='44' y='206' width='7' height='12' rx='1' fill='%233ddbd0' transform='rotate(35 47 212)'/%3E%3Ccircle cx='246' cy='218' r='3' fill='%233ddbd0'/%3E%3Crect x='140' y='246' width='6' height='11' rx='1' fill='%23ff8fbf' transform='rotate(15 143 251)'/%3E%3C/svg%3E");background-size:280px 280px}
+@keyframes eid-fall{to{background-position:0 280px}}
+/* Keep forms clear of moving confetti */
+html[data-theme=eid]:has(.co,.auth-box)::before{display:none}
+html[data-theme=eid] .sh h2,html[data-theme=eid] .page-h h1,html[data-theme=eid] .ritual h2,html[data-theme=eid] .nl h2,html[data-theme=eid] .done h1,html[data-theme=eid] .auth-box h1,html[data-theme=eid] .pdi h1{text-shadow:2px 2px 0 var(--rose)}
+html[data-theme=eid] .btn,html[data-theme=eid] .tile,html[data-theme=eid] .card,html[data-theme=eid] .cat,html[data-theme=eid] .w,html[data-theme=eid] .q,html[data-theme=eid] .nl,html[data-theme=eid] .panel,html[data-theme=eid] .side,html[data-theme=eid] .ritual,html[data-theme=eid] .chip,html[data-theme=eid] .in,html[data-theme=eid] select.in,html[data-theme=eid] textarea.in,html[data-theme=eid] .add,html[data-theme=eid] .cart,html[data-theme=eid] .pill,html[data-theme=eid] .ord,html[data-theme=eid] .note,html[data-theme=eid] .tag,html[data-theme=eid] .main .eyebrow,html[data-theme=eid] .bp,html[data-theme=eid] .toast{border-radius:18px}
+html[data-theme=eid] .links a,html[data-theme=eid] .cart,html[data-theme=eid] .btn,html[data-theme=eid] .add,html[data-theme=eid] .bp{text-transform:none;letter-spacing:0;font-weight:700}
+html[data-theme=eid] .nm{font-size:18px;line-height:1.25;letter-spacing:0}
+html[data-theme=eid] .main h1{letter-spacing:0;line-height:1.05}
+html[data-theme=eid] .main::before{content:"";position:absolute;right:5%;top:5%;width:104px;height:104px;z-index:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M70 18A40 40 0 1 0 70 82A32 32 0 1 1 70 18z' fill='%23ffd166'/%3E%3Cpath d='M78 34l3.500 10 10.500.3-8.400 6.300 3 10-8.600-6-8.600 6 3-10-8.400-6.300 10.500-.3z' fill='%23fff'/%3E%3C/svg%3E") center/contain no-repeat;filter:drop-shadow(0 0 18px rgba(255,209,102,.6))}
+html[data-theme=eid] .stage::before,html[data-theme=eid] .stage::after{content:"";position:absolute;width:56px;height:96px;z-index:2;animation:eid-balloon 6s ease-in-out infinite;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 96'%3E%3Cellipse cx='28' cy='28' rx='24' ry='27' fill='%233ddbd0'/%3E%3Cellipse cx='20' cy='18' rx='5' ry='8' fill='%23fff' fill-opacity='.5'/%3E%3Cpath d='M24 55h8l-4 5z' fill='%233ddbd0'/%3E%3Cpath d='M28 60q5 12 0 20t2 16' stroke='%23fff' stroke-opacity='.7' fill='none'/%3E%3C/svg%3E") center/contain no-repeat}
+html[data-theme=eid] .stage::before{left:-4%;top:6%}
+html[data-theme=eid] .stage::after{right:-2%;bottom:0;width:46px;height:80px;animation-delay:-3s;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 96'%3E%3Cellipse cx='28' cy='28' rx='24' ry='27' fill='%23ffd166'/%3E%3Cellipse cx='20' cy='18' rx='5' ry='8' fill='%23fff' fill-opacity='.6'/%3E%3Cpath d='M24 55h8l-4 5z' fill='%23ffd166'/%3E%3Cpath d='M28 60q5 12 0 20t2 16' stroke='%23fff' stroke-opacity='.7' fill='none'/%3E%3C/svg%3E")}
+@keyframes eid-balloon{50%{transform:translateY(-16px) rotate(4deg)}}
+
 @media(max-width:900px){
+  html[data-theme=ramadan] .main::after{left:auto;right:6%;height:96px;width:34px}
+  html[data-theme=ramadan] .stage::before{display:none}
+  html[data-theme=ramadan] .main{min-height:680px}
+  html[data-theme=ramadan] .main h1{font-size:46px}
+  html[data-theme=eid] .main{min-height:620px}
+  html[data-theme=eid] .main::before{width:64px;height:64px;right:4%;top:3%}
+  html[data-theme=eid] .stage::before{display:none}
   html[data-theme] .q p{font-size:20px}
   html[data-theme] .main h1{font-size:68px}
   html[data-theme=halloween] .main::before{right:8%;top:-40px;width:110px;height:110px}

@@ -93,7 +93,7 @@ create table store_settings (
   id boolean primary key default true check (id), -- single row
   shipping_fee integer not null default 60,
   free_shipping_over integer not null default 1000,
-  theme text not null default 'default' check (theme in ('default','newyear','halloween'))
+  theme text not null default 'default' check (theme in ('default','newyear','halloween','ramadan','eid'))
 );
 insert into store_settings default values;
 
@@ -269,7 +269,7 @@ end $$;
 create function admin_set_theme(p_theme text) returns text language plpgsql security definer set search_path = public as $$
 begin
   perform require_admin();
-  if p_theme not in ('default','newyear','halloween') then raise exception 'Unknown theme'; end if;
+  if p_theme not in ('default','newyear','halloween','ramadan','eid') then raise exception 'Unknown theme'; end if;
   update store_settings set theme = p_theme where id; -- Supabase refuses updates without a where clause
   return p_theme;
 end $$;
