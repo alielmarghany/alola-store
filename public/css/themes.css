@@ -80,6 +80,10 @@ html[data-theme] .links.open{background:var(--head)}
 html[data-theme] .ind{background:rgba(255,255,255,.08);border:2px solid var(--rose);border-radius:0}
 html[data-theme] .icon-btn{background:var(--card);color:var(--ink);border:2px solid var(--olive)}
 html[data-theme] .icon-btn:hover{background:var(--sage)}
+html[data-theme] .icon-btn.lang-btn{background:var(--card);color:var(--gold);border-color:var(--gold);border-radius:0}
+html[data-theme] .icon-btn.lang-btn:hover{background:var(--gold);color:var(--dark)}
+html[data-theme=eid] .icon-btn.lang-btn{border-radius:99px}
+html[data-theme] .lang-link{color:var(--gold)}
 html[data-theme] .cart{background:var(--rose);color:#fff;border-radius:0;box-shadow:4px 4px 0 var(--olive);font-family:var(--display);letter-spacing:.03em;text-transform:uppercase}
 html[data-theme] .cart:hover{background:var(--rose);transform:translate(2px,2px);box-shadow:2px 2px 0 var(--olive)}
 html[data-theme] .cart i{background:var(--gold);color:var(--dark);border-radius:0}

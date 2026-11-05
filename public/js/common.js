@@ -167,7 +167,7 @@ window.A = (function () {
         <a href="shop.html"${active === 'shop' ? ' class="cur"' : ''}>All products</a><a href="${home}#featured">Featured</a><a href="${home}#brands">Brands</a><a href="${home}#why">Why Alola</a><a href="${home}#reviews">Reviews</a></nav>
       <div class="nav-r">
         <a class="icon-btn" href="shop.html?focus=1" aria-label="Search products">${ICON.search}</a>
-        <button class="icon-btn lang-btn" id="langBtn" lang="${T.ar ? 'en' : 'ar'}" aria-label="${T.ar ? 'Switch to English' : 'التبديل إلى العربية'}">${T.ar ? 'EN' : 'ع'}</button>
+        <button class="icon-btn lang-btn" id="langBtn" lang="${T.ar ? 'en' : 'ar'}" aria-label="${T.ar ? 'Switch to English' : 'التبديل إلى العربية'}">${T.ar ? 'English' : 'العربية'}</button>
         <a class="icon-btn" href="account.html" aria-label="My account"${active === 'account' ? ' aria-current="page"' : ''}>${ICON.user}</a>
         <button class="cart" id="cartBtn" aria-label="Open cart"><span class="lbl">Cart</span> <i class="cart-count">0</i></button>
         <button class="icon-btn burger" id="burger" aria-label="Menu" aria-expanded="false">${ICON.menu}</button>
@@ -180,7 +180,7 @@ window.A = (function () {
         <div><h4>Shop</h4><a href="shop.html">All products</a><a href="shop.html?category=Skincare">Skincare</a><a href="shop.html?category=Makeup">Makeup</a><a href="shop.html?category=Hair">Hair</a><a href="shop.html?category=Fragrance">Fragrance</a></div>
         <div><h4>Store</h4><a href="account.html">My account</a><a href="./#why">Why Alola</a><a href="./#brands">Brands</a><a href="./#reviews">Reviews</a></div>
         <div><h4>Staff</h4><a href="admin/">Admin dashboard</a></div>
-      </div><div class="ft-b"><span>© ${new Date().getFullYear()} Alola Cosmetics</span><span>Prices include VAT · Cash on delivery</span></div></footer>
+      </div><div class="ft-b"><span>© ${new Date().getFullYear()} Alola Cosmetics</span><span>Prices include VAT · Cash on delivery</span><button class="lang-link" id="langFoot" lang="${T.ar ? 'en' : 'ar'}">${T.ar ? 'English' : 'العربية'}</button></div></footer>
       <div class="ov" id="overlay"></div>
       <aside class="dr" id="cartDrawer" aria-label="Shopping cart"><div class="dh"><h3>Your cart</h3><button class="icon-btn" id="cartClose" aria-label="Close cart">${ICON.close}</button></div>
         <div class="ship" id="shipBar" hidden><span id="shipMsg"></span><i><u id="shipFill" style="width:0"></u></i></div>
@@ -190,7 +190,7 @@ window.A = (function () {
       <div class="toast" id="toast" role="status" aria-live="polite"></div>`;
     document.body.append(...tail.children);
 
-    $('#langBtn').onclick = () => T.set(T.ar ? 'en' : 'ar');
+    $('#langBtn').onclick = $('#langFoot').onclick = () => T.set(T.ar ? 'en' : 'ar');
 
     // nav behaviour
     const ind = $('#ind');

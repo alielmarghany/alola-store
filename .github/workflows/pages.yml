@@ -34,6 +34,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Stamp files with this version so browsers fetch the new code
+        run: |
+          find public -name '*.html' -exec sed -i -E 's#(src|href)="((\.\./)?[A-Za-z0-9_/.-]+\.(js|css))"#="?v=${{ github.sha }}"#g' {} +
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

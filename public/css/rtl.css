@@ -83,7 +83,6 @@ html[dir=rtl][data-theme=ramadan] .main::after{left:auto;right:46%}
 html[dir=rtl][data-theme=ramadan] .stage::before{right:auto;left:2%}
 html[dir=rtl][data-theme=eid] .main::before{right:auto;left:5%}
 
-html[lang=ar] .lang-btn{font-weight:700;font-size:13px}
 
 @media(max-width:900px){
   html[lang=ar] .main h1{font-size:60px}
