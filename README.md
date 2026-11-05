@@ -8,6 +8,8 @@ A cosmetics store and admin dashboard. The site is static files hosted on **GitH
 
 **Store:** landing page, all-products page with search and filters, product pages, cart, and cash-on-delivery checkout.
 
+**Arabic version:** a language button in the header switches the store between English and Arabic, with a right-to-left layout. First-time visitors get Arabic if their browser is set to it. Translations of site text are in `public/js/i18n.js`, and Arabic product text is edited in the dashboard.
+
 **Customer accounts:** sign up and log in, saved name, phone and delivery address filled in at checkout, order history with status, and password change and reset. Guest checkout still works. No card details are collected or stored.
 
 **Dashboard (`/admin/`):**
@@ -36,7 +38,7 @@ The public key in `public/js/config.js` is safe to publish. Access rules in `sup
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the **SQL Editor**, run `supabase/schema.sql`.
-3. Run `supabase/products-alola.sql` to add Alola's 50 products. To try the dashboard with made-up data on a test project instead, run `supabase/seed.sql`.
+3. Run `supabase/products-alola.sql`, then `supabase/products-alola-arabic.sql`, to add Alola's 50 products. To try the dashboard with made-up data on a test project instead, run `supabase/seed.sql`.
 4. Under **Authentication > Users**, add a user with your email and password.
 5. Make that user an admin. In the SQL Editor, run this with your email:
    ```sql

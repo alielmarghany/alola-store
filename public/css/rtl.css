@@ -1,0 +1,96 @@
+@charset "utf-8";
+/* Arabic: right-to-left layout and Arabic fonts. Only applies when the store language is Arabic. */
+
+/* ---------- fonts: every theme gets an Arabic face, since its English fonts have no Arabic letters ---------- */
+html[lang=ar]{--display:"Cairo",system-ui,sans-serif;--body:"Cairo",system-ui,sans-serif;--serif:"El Messiri",Georgia,serif}
+html[lang=ar][data-theme=halloween]{--display:"Lalezar","Cairo",sans-serif;--serif:"Lalezar","Cairo",sans-serif;--body:"Cairo",sans-serif;--body-size:15.500px;--body-weight:400;--greeting:"هالوين سعيد"}
+html[lang=ar][data-theme=newyear]{--display:"Aref Ruqaa","Cairo",serif;--serif:"Aref Ruqaa","Cairo",serif;--body:"Cairo",sans-serif;--body-size:15.500px;--body-weight:400;--greeting:"كل عام وأنتم بخير"}
+html[lang=ar][data-theme=ramadan]{--display:"Aref Ruqaa","Amiri",serif;--serif:"Aref Ruqaa","Amiri",serif;--body:"Amiri",serif}
+html[lang=ar][data-theme=eid]{--display:"El Messiri","Cairo",serif;--serif:"El Messiri","Cairo",serif;--body:"Cairo",sans-serif}
+
+/* Arabic letters join, so spacing and capitals must stay off; and the script needs room above and below. */
+html[lang=ar] *{letter-spacing:0!important}
+html[lang=ar] h1,html[lang=ar] h2,html[lang=ar] h3,html[lang=ar] .links a,html[lang=ar] .btn,html[lang=ar] .cart,html[lang=ar] .add,html[lang=ar] .br,html[lang=ar] .kick,html[lang=ar] .side h4,html[lang=ar] .ft-g h4{text-transform:none!important}
+html[lang=ar] em{font-style:normal}
+html[lang=ar] body{line-height:1.7}
+html[lang=ar] h1,html[lang=ar] h2,html[lang=ar] h3,html[lang=ar] .sh h2,html[lang=ar] .page-h h1,html[lang=ar] .ritual h2,html[lang=ar] .nl h2,html[lang=ar] .pdi h1,html[lang=ar] .done h1,html[lang=ar] .auth-box h1{line-height:1.3}
+html[lang=ar] .main h1{line-height:1.3;font-size:clamp(56px,7vw,100px)}
+html[lang=ar] .main h1 .ln-m{padding-bottom:.18em;margin-bottom:-.18em;padding-top:.08em}
+html[lang=ar] .main h1 em{font-size:1em;line-height:1.3}
+html[lang=ar] .nm{line-height:1.45;font-size:16px}
+html[lang=ar] .tile .big{font-size:46px;line-height:1.2}
+html[lang=ar] .q p{line-height:1.55;font-size:19px}
+html[lang=ar] .side h4,html[lang=ar] .kick{font-size:14px}
+html[lang=ar] .br{font-size:12px}
+html[lang=ar] .links a{font-size:15px}
+html[lang=ar] .links a{padding-inline:12px}
+
+/* Decorative Arabic faces are for headlines only: small text stays in a clear, readable font */
+html[lang=ar] .links a,html[lang=ar] .btn,html[lang=ar] .cart,html[lang=ar] .add,html[lang=ar] .tag,html[lang=ar] .nm,html[lang=ar] .cat b,html[lang=ar] .w h3,html[lang=ar] .step h3,html[lang=ar] .panel h2,html[lang=ar] .dh h3,html[lang=ar] .tot.g,html[lang=ar] .auth-tabs button,html[lang=ar] .pr,html[lang=ar] .pp,html[lang=ar] .bp,html[lang=ar] .side-h h3{font-family:"Cairo",system-ui,sans-serif;font-weight:700}
+html[lang=ar] .links a{font-size:14px}
+html[lang=ar] .btn{font-size:15px}
+html[lang=ar] .add{font-size:13px}
+html[lang=ar] .cart{font-size:14px}
+html[lang=ar] .nm{font-size:15.500px}
+html[lang=ar] .cat b,html[lang=ar] .step h3{font-size:21px}
+html[lang=ar] .w h3{font-size:20px}
+
+/* ---------- direction ---------- */
+html[dir=rtl] .tag{left:auto;right:12px}
+html[dir=rtl] .heart{right:auto;left:10px}
+html[dir=rtl] .tile .tile-art{right:auto;left:-8px}
+html[dir=rtl] .cat{text-align:right}
+html[dir=rtl] .cat .cat-art{right:auto;left:-10px}
+html[dir=rtl] .pr s{margin-left:0;margin-right:6px}
+html[dir=rtl] .pp s{margin-left:0;margin-right:10px}
+html[dir=rtl] .chk span.n{margin-left:0;margin-right:auto}
+html[dir=rtl] .searchbox svg{left:auto;right:14px}
+html[dir=rtl] .searchbox .in{padding-left:18px;padding-right:38px}
+html[dir=rtl] .toolbar select{padding-right:18px;padding-left:14px}
+html[dir=rtl] #cartItems{margin-right:0;padding-right:0;margin-left:-8px;padding-left:8px}
+html[dir=rtl] #bar{left:auto;right:0}
+html[dir=rtl] .sprig{transform:scaleX(-1)}
+
+/* arrows point the way the page reads */
+html[dir=rtl] .btn svg,html[dir=rtl] .crumb svg,html[dir=rtl] .arrows svg{transform:scaleX(-1)}
+html[dir=rtl] .btn:hover svg{transform:scaleX(-1) translateX(3px)}
+
+/* cart slides in from the left */
+html[dir=rtl] .dr{right:auto;left:0;transform:translateX(-105%);border-radius:0 30px 30px 0}
+html[dir=rtl] .dr.on{transform:none}
+html[dir=rtl] .ci{animation-name:fadeUp}
+
+/* email, phone and password read left to right, even in Arabic */
+html[dir=rtl] input[type=email],html[dir=rtl] input[type=tel],html[dir=rtl] input[type=password]{direction:ltr;text-align:right}
+html[dir=rtl] input[type=email]::placeholder,html[dir=rtl] input[type=tel]::placeholder{direction:rtl}
+
+/* the brand strip and price slider keep their left-to-right motion */
+html[dir=rtl] .mq,html[dir=rtl] .dual{direction:ltr}
+
+/* hero: text on the right, artwork on the left */
+@media(min-width:901px){
+  html[dir=rtl] .stage{right:auto;left:4%}
+}
+
+/* ---------- themes: mirror their decorations ---------- */
+html[dir=rtl][data-theme] .tag{left:auto;right:0}
+html[dir=rtl][data-theme] .dr{border-left:0;border-right:3px solid var(--rose);border-radius:0}
+html[dir=rtl][data-theme=eid] .dr{border-radius:0}
+html[dir=rtl][data-theme=halloween] .main::before{right:auto;left:30%}
+html[dir=rtl][data-theme=newyear] .main::before{right:auto;left:26%}
+html[dir=rtl][data-theme=ramadan] .main::before{right:auto;left:-70px}
+html[dir=rtl][data-theme=ramadan] .main::after{left:auto;right:46%}
+html[dir=rtl][data-theme=ramadan] .stage::before{right:auto;left:2%}
+html[dir=rtl][data-theme=eid] .main::before{right:auto;left:5%}
+
+html[lang=ar] .lang-btn{font-weight:700;font-size:13px}
+
+@media(max-width:900px){
+  html[lang=ar] .main h1{font-size:60px}
+  html[lang=ar] .tile .big{font-size:32px}
+  html[lang=ar] .main,html[lang=ar][data-theme=ramadan] .main,html[lang=ar][data-theme=eid] .main{min-height:740px}
+  html[dir=rtl][data-theme=eid] .main::before{left:4%}
+  html[dir=rtl][data-theme=ramadan] .main::after{right:auto;left:6%}
+  html[dir=rtl][data-theme=halloween] .main::before{left:8%}
+  html[dir=rtl] .dr{border-radius:0}
+}

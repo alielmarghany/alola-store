@@ -3,7 +3,10 @@ window.A = (function () {
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmt = n => Number(n).toLocaleString('en-US') + ' EGP';
+  const fmt = n => Number(n).toLocaleString('en-US') + (T.ar ? ' ج.م' : ' EGP');
+  /** A product's text in the visitor's language, falling back to English. */
+  const loc = (p, field) => (T.ar && p[`${field}_ar`]) || p[field] || '';
+  const pname = p => loc(p, 'name');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const ICON = {
@@ -46,7 +49,7 @@ window.A = (function () {
 
   // ------------------------------------------------ product rendering
   const media = p => p.image
-    ? `<div class="media photo"><img src="${esc(p.image)}" alt="${esc(p.brand + ' ' + p.name)}" loading="lazy"></div>`
+    ? `<div class="media photo"><img src="${esc(p.image)}" alt="${esc(p.brand + ' ' + pname(p))}" loading="lazy"></div>`
     : `<div class="media">${alolaArt(p)}</div>`;
   const starStr = r => { const n = Math.round(r); return '★'.repeat(n) + '☆'.repeat(5 - n); };
   const rating = p => p.rating_count
@@ -61,9 +64,9 @@ window.A = (function () {
   }
   const card = (p, i = 0) => `<article class="card" style="--d:${i}" data-id="${p.id}">
     <div class="ph ph-${esc(p.category)}">${tagHtml(p)}
-      <button class="heart${saved().includes(p.id) ? ' on' : ''}" data-heart="${p.id}" aria-label="Save ${esc(p.name)}" aria-pressed="${saved().includes(p.id)}">${ICON.heart}</button>
+      <button class="heart${saved().includes(p.id) ? ' on' : ''}" data-heart="${p.id}" aria-label="Save ${esc(pname(p))}" aria-pressed="${saved().includes(p.id)}">${ICON.heart}</button>
       ${media(p)}</div>
-    <div class="info"><div class="br">${esc(p.brand)}</div><h3 class="nm"><a href="${url(p)}">${esc(p.name)}</a></h3>${rating(p)}
+    <div class="info"><div class="br">${esc(p.brand)}</div><h3 class="nm"><a href="${url(p)}">${esc(pname(p))}</a></h3>${rating(p)}
       <div class="row"><div class="pr">${price(p)}</div><button class="add" data-add="${p.id}" ${p.stock <= 0 ? 'disabled' : ''}>${p.stock <= 0 ? 'Sold out' : 'Add +'}</button></div></div>
   </article>`;
 
@@ -111,9 +114,9 @@ window.A = (function () {
     const box = $('#cartItems'); if (!box) return;
     const [lines, cfg] = await Promise.all([cartLines(), config()]);
     const t = totals(lines, cfg);
-    box.innerHTML = lines.length ? lines.map(({ p, qty }) => `<div class="ci"><a class="thumb ph-${esc(p.category)}" href="${url(p)}" aria-label="${esc(p.name)}">${media(p)}</a>
-      <div class="ci-m"><b>${esc(p.name)}</b><small>${esc(p.brand)} · ${fmt(p.price)}</small></div>
-      <div class="qt"><button data-cq="${p.id}" data-d="-1" aria-label="Remove one ${esc(p.name)}">−</button><span>${qty}</span><button data-cq="${p.id}" data-d="1" aria-label="Add one ${esc(p.name)}">+</button></div></div>`).join('')
+    box.innerHTML = lines.length ? lines.map(({ p, qty }) => `<div class="ci"><a class="thumb ph-${esc(p.category)}" href="${url(p)}" aria-label="${esc(pname(p))}">${media(p)}</a>
+      <div class="ci-m"><b>${esc(pname(p))}</b><small>${esc(p.brand)} · ${fmt(p.price)}</small></div>
+      <div class="qt"><button data-cq="${p.id}" data-d="-1" aria-label="Remove one ${esc(pname(p))}">−</button><span>${qty}</span><button data-cq="${p.id}" data-d="1" aria-label="Add one ${esc(pname(p))}">+</button></div></div>`).join('')
       : `<div class="empty"><h3>Your cart is empty</h3><p>Find something you’ll love.</p><p style="margin-top:14px"><a class="btn dk" href="shop.html">Browse products</a></p></div>`;
     $$('.cart-count').forEach(el => el.textContent = t.count);
     $('#cartFoot').hidden = !lines.length;
@@ -164,6 +167,7 @@ window.A = (function () {
         <a href="shop.html"${active === 'shop' ? ' class="cur"' : ''}>All products</a><a href="${home}#featured">Featured</a><a href="${home}#brands">Brands</a><a href="${home}#why">Why Alola</a><a href="${home}#reviews">Reviews</a></nav>
       <div class="nav-r">
         <a class="icon-btn" href="shop.html?focus=1" aria-label="Search products">${ICON.search}</a>
+        <button class="icon-btn lang-btn" id="langBtn" lang="${T.ar ? 'en' : 'ar'}" aria-label="${T.ar ? 'Switch to English' : 'التبديل إلى العربية'}">${T.ar ? 'EN' : 'ع'}</button>
         <a class="icon-btn" href="account.html" aria-label="My account"${active === 'account' ? ' aria-current="page"' : ''}>${ICON.user}</a>
         <button class="cart" id="cartBtn" aria-label="Open cart"><span class="lbl">Cart</span> <i class="cart-count">0</i></button>
         <button class="icon-btn burger" id="burger" aria-label="Menu" aria-expanded="false">${ICON.menu}</button>
@@ -185,6 +189,8 @@ window.A = (function () {
       </aside>
       <div class="toast" id="toast" role="status" aria-live="polite"></div>`;
     document.body.append(...tail.children);
+
+    $('#langBtn').onclick = () => T.set(T.ar ? 'en' : 'ar');
 
     // nav behaviour
     const ind = $('#ind');
@@ -264,5 +270,5 @@ window.A = (function () {
     requestAnimationFrame(f);
   }
 
-  return { $, $$, esc, fmt, products, config, subscribe, GOVERNORATES, media, card, rating, price, url, tagHtml, saved, getCart, setCart, addToCart, cartLines, totals, openCart, flyToCart, toast, mountChrome, reveal, renderCart, ICON, reduced };
+  return { $, $$, esc, fmt, loc, pname, products, config, subscribe, GOVERNORATES, media, card, rating, price, url, tagHtml, saved, getCart, setCart, addToCart, cartLines, totals, openCart, flyToCart, toast, mountChrome, reveal, renderCart, ICON, reduced };
 })();

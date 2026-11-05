@@ -8,7 +8,7 @@
 
   const fld = (id, label, attrs = '', hint = '') => `<div class="fld" id="f-${id}"><label for="${id}">${label}</label><input class="in" id="${id}" name="${id}" ${attrs}>${hint ? `<small class="hint">${hint}</small>` : ''}<div class="err" id="e-${id}"></div></div>`;
   const STATUS = { pending: 'Received', confirmed: 'Confirmed', shipped: 'On its way', delivered: 'Delivered', cancelled: 'Cancelled' };
-  const dateFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', day: 'numeric', month: 'short', year: 'numeric' });
+  const dateFmt = new Intl.DateTimeFormat(T.ar ? 'ar-EG-u-nu-latn' : 'en-GB', { timeZone: 'Africa/Cairo', day: 'numeric', month: 'short', year: 'numeric' });
 
   function setBusy(btn, busy, label) { btn.disabled = busy; if (label) btn.textContent = label; }
   function showErrors(fields) {
@@ -95,14 +95,14 @@
     cfgGovs = A.GOVERNORATES;
     const first = (profile.name || '').split(' ')[0];
 
-    root.innerHTML = `<div class="page-h acct-h"><div><h1>${first ? `Hi, <em>${esc(first)}</em>` : 'My <em>account</em>'}</h1><p>${esc(user.email)}</p></div><button class="btn ln" id="logout">Log out</button></div>
+    root.innerHTML = `<div class="page-h acct-h"><div><h1>${first ? `${T.t('Hi,')} <em>${esc(first)}</em>` : 'My <em>account</em>'}</h1><p>${esc(user.email)}</p></div><button class="btn ln" id="logout">Log out</button></div>
       <div class="co">
         <section id="orders" style="padding:0"><div class="panel"><h2>My orders</h2><div id="orderList">${orders.length ? orders.map(orderCard).join('') : `<div class="empty" style="padding:30px 10px"><p>You haven’t ordered anything yet.</p><p style="margin-top:14px"><a class="btn dk" href="shop.html">Browse products</a></p></div>`}</div></div></section>
         <aside>
           <form class="panel" id="pf" novalidate><h2>My details</h2><p class="sub" style="margin-bottom:12px">We’ll fill these in for you at checkout.</p>
             ${fld('name', 'Full name', `autocomplete="name" value="${esc(profile.name)}"`)}
             ${fld('phone', 'Phone', `type="tel" autocomplete="tel" placeholder="01X XXXX XXXX" value="${esc(profile.phone)}"`)}
-            <div class="fld" id="f-city"><label for="city">Governorate</label><select class="in" id="city" autocomplete="address-level1"><option value="">Choose…</option>${cfgGovs.map(g => `<option ${g === profile.city ? 'selected' : ''}>${g}</option>`).join('')}</select><div class="err" id="e-city"></div></div>
+            <div class="fld" id="f-city"><label for="city">Governorate</label><select class="in" id="city" autocomplete="address-level1"><option value="">Choose…</option>${cfgGovs.map(g => `<option value="${g}" ${g === profile.city ? 'selected' : ''}>${g}</option>`).join('')}</select><div class="err" id="e-city"></div></div>
             <div class="fld" id="f-address"><label for="address">Delivery address</label><textarea class="in" id="address" autocomplete="street-address" placeholder="Street, building, floor, apartment">${esc(profile.address)}</textarea><div class="err" id="e-address"></div></div>
             <button class="btn dk" style="width:100%" id="saveP">Save details</button></form>
           <form class="panel" id="pw" novalidate><h2>Change password</h2>${fld('password', 'New password', 'type="password" autocomplete="new-password"', 'At least 8 characters')}<button class="btn ln" style="width:100%" id="saveW">Update password</button></form>
@@ -138,7 +138,7 @@
 
   function orderCard(o) {
     return `<article class="ord"><div class="ord-h"><div><b>${esc(o.number)}</b><small>${dateFmt.format(new Date(o.created_at))}</small></div><span class="st st-${esc(o.status)}">${STATUS[o.status] || esc(o.status)}</span></div>
-      ${o.items.map(i => `<div class="ord-i"><span>${esc(i.name)}<small>${esc(i.brand)} · ${i.qty} × ${fmt(i.price)}</small></span><span>${fmt(i.qty * i.price)}</span></div>`).join('')}
+      ${o.items.map(i => `<div class="ord-i"><span>${esc((T.ar && i.name_ar) || i.name)}<small>${esc(i.brand)} · ${i.qty} × ${fmt(i.price)}</small></span><span>${fmt(i.qty * i.price)}</span></div>`).join('')}
       <div class="ord-t"><span>Delivery to ${esc(o.city)}: ${o.shipping ? fmt(o.shipping) : 'Free'}</span><b>${fmt(o.total)}</b></div></article>`;
   }
 

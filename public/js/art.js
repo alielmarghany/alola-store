@@ -96,7 +96,7 @@
     const c = COLORS[p.color] || COLORS.cream;
     const g = 'ag' + (++uid);
     const shape = SHAPES[p.art] || SHAPES.bottle;
-    return `<svg class="pack" viewBox="0 0 300 300" role="img" aria-label="${esc(p.brand + ' ' + p.name)}">
+    return `<svg class="pack" viewBox="0 0 300 300" role="img" aria-label="${esc(p.brand + ' ' + ((window.T && T.ar && p.name_ar) || p.name))}">
       <defs>
         <linearGradient id="${g}b" x1="0" x2="1"><stop offset="0" stop-color="${c.a}"/><stop offset=".42" stop-color="${c.b}"/><stop offset="1" stop-color="${c.c}"/></linearGradient>
         <linearGradient id="${g}m" x1="0" x2="1"><stop offset="0" stop-color="#94733f"/><stop offset=".45" stop-color="#f3dfb2"/><stop offset="1" stop-color="#8a6a38"/></linearGradient>

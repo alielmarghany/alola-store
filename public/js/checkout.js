@@ -19,7 +19,7 @@
     const box = $('#summary'); if (!box) return;
     const lines = await A.cartLines(), t = A.totals(lines, cfg);
     if (!lines.length) return renderEmpty();
-    box.innerHTML = `${lines.map(({ p, qty }) => `<div class="ci"><div class="thumb ph-${esc(p.category)}">${media(p)}</div><div class="ci-m"><b>${esc(p.name)}</b><small>${esc(p.brand)} · ${qty} × ${fmt(p.price)}</small></div><b>${fmt(p.price * qty)}</b></div>`).join('')}
+    box.innerHTML = `${lines.map(({ p, qty }) => `<div class="ci"><div class="thumb ph-${esc(p.category)}">${media(p)}</div><div class="ci-m"><b>${esc(A.pname(p))}</b><small>${esc(p.brand)} · ${qty} × ${fmt(p.price)}</small></div><b>${fmt(p.price * qty)}</b></div>`).join('')}
       <div style="height:12px"></div><div class="tot"><span>Subtotal</span><span>${fmt(t.subtotal)}</span></div>
       <div class="tot"><span>Delivery</span><span>${t.shipping ? fmt(t.shipping) : 'Free'}</span></div>
       <div class="tot g"><span>Total</span><span>${fmt(t.total)}</span></div>`;
@@ -41,7 +41,7 @@
           <div class="f2">${field('phone', 'Phone', inp('phone', 'tel', 'tel', 'required placeholder="01X XXXX XXXX"', saved?.phone))}${field('email', 'Email', inp('email', 'email', 'email', user ? 'required readonly' : 'required', user?.email))}</div>
         </div>
         <div class="panel"><h2>Delivery</h2>
-          ${field('city', 'Governorate', `<select class="in" id="city" name="city" required autocomplete="address-level1"><option value="">Choose…</option>${GOVS.map(g => `<option ${g === saved?.city ? 'selected' : ''}>${g}</option>`).join('')}</select>`)}
+          ${field('city', 'Governorate', `<select class="in" id="city" name="city" required autocomplete="address-level1"><option value="">Choose…</option>${GOVS.map(g => `<option value="${g}" ${g === saved?.city ? 'selected' : ''}>${g}</option>`).join('')}</select>`)}
           ${field('address', 'Address', `<textarea class="in" id="address" name="address" required autocomplete="street-address" placeholder="Street, building, floor, apartment">${esc(saved?.address)}</textarea>`)}
           ${field('notes', 'Notes (optional)', `<textarea class="in" id="notes" name="notes" style="min-height:60px" placeholder="Anything the courier should know"></textarea>`)}
           ${user ? `<label class="chk"><input type="checkbox" name="save" checked> Save these details for next time</label>` : ''}

@@ -47,7 +47,7 @@
   function match(p, skip) {
     const q = F.q.trim().toLowerCase();
     if (q) {
-      const hay = `${p.name} ${p.brand} ${p.category}`.toLowerCase();
+      const hay = `${p.name} ${p.name_ar || ''} ${p.brand} ${p.category} ${T.t(p.category)}`.toLowerCase();
       if (!q.split(/\s+/).every(w => hay.includes(w))) return false;
     }
     if (skip !== 'category' && F.category && p.category !== F.category) return false;
@@ -65,7 +65,7 @@
     'price-asc': (a, b) => a.price - b.price,
     'price-desc': (a, b) => b.price - a.price,
     rating: (a, b) => (b.rating || 0) - (a.rating || 0),
-    name: (a, b) => a.name.localeCompare(b.name),
+    name: (a, b) => A.pname(a).localeCompare(A.pname(b), T.lang),
   };
 
   // Build static controls once

@@ -407,12 +407,13 @@
   const ACOLORS = ['cream', 'white', 'olive', 'rose', 'amber', 'gold', 'ink', 'sky', 'plum'];
   function openProductForm(p) {
     const isNew = !p;
-    const v = p || { name: '', brand: '', category: 'Skincare', price: '', compare_at: '', stock: '', description: '', how_to: '', ingredients: '', art: 'bottle', color: 'cream', image: null, tag: '', featured: false, active: true };
+    const v = p || { name: '', name_ar: '', description_ar: '', how_to_ar: '', brand: '', category: 'Skincare', price: '', compare_at: '', stock: '', description: '', how_to: '', ingredients: '', art: 'bottle', color: 'cream', image: null, tag: '', featured: false, active: true };
     const brands = [...new Set(productsState.rows.map(x => x.brand))];
     const dr = openDrawer(`<div class="dr-h"><h2>${isNew ? 'Add product' : 'Edit product'}</h2>${closeBtn}</div>
       <form id="pf" novalidate><div class="form-err" id="pe" role="alert" hidden></div>
       <div class="card"><h2>Details</h2>
         <div class="fld"><label for="f_name">Name</label><input class="in" id="f_name" required maxlength="120" value="${esc(v.name)}"></div>
+        <div class="fld"><label for="f_name_ar">Name in Arabic</label><input class="in" id="f_name_ar" dir="rtl" maxlength="120" value="${esc(v.name_ar)}"></div>
         <div class="f2"><div class="fld"><label for="f_brand">Brand</label><input class="in" id="f_brand" required maxlength="60" list="brandList" value="${esc(v.brand)}"><datalist id="brandList">${brands.map(b => `<option value="${esc(b)}">`).join('')}</datalist></div>
           <div class="fld"><label for="f_category">Category</label><select class="in" id="f_category">${['Skincare', 'Makeup', 'Hair', 'Fragrance'].map(c => `<option ${v.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div>
         <div class="f3"><div class="fld"><label for="f_price">Price (EGP)</label><input class="in" id="f_price" type="number" min="1" step="1" inputmode="numeric" required value="${v.price}"></div>
@@ -431,6 +432,8 @@
         <div class="fld"><label for="f_desc">Description</label><textarea class="in" id="f_desc" maxlength="4000">${esc(v.description)}</textarea></div>
         <div class="fld"><label for="f_how">How to use</label><textarea class="in" id="f_how" maxlength="2000">${esc(v.how_to)}</textarea></div>
         <div class="fld"><label for="f_ing">Ingredients</label><textarea class="in" id="f_ing" maxlength="2000">${esc(v.ingredients)}</textarea></div>
+        <div class="fld"><label for="f_desc_ar">Description in Arabic</label><textarea class="in" id="f_desc_ar" dir="rtl" maxlength="4000">${esc(v.description_ar)}</textarea></div>
+        <div class="fld"><label for="f_how_ar">How to use in Arabic</label><textarea class="in" id="f_how_ar" dir="rtl" maxlength="2000">${esc(v.how_to_ar)}</textarea></div>
       </div>
       <div class="dr-foot"><button type="button" class="btn ln" data-close>Cancel</button><button class="btn" id="pSave">${isNew ? 'Add product' : 'Save changes'}</button></div></form>`);
     $$('[data-close]', dr).forEach(b => b.onclick = closeDrawer);
@@ -457,7 +460,7 @@
       err.hidden = true; btn.disabled = true;
       const num = id => { const s = val(id).trim(); return s === '' ? NaN : Number(s); };
       const body = {
-        name: val('f_name'), brand: val('f_brand'), category: val('f_category'), price: num('f_price'),
+        name: val('f_name'), name_ar: val('f_name_ar').trim(), description_ar: val('f_desc_ar').trim(), how_to_ar: val('f_how_ar').trim(), brand: val('f_brand'), category: val('f_category'), price: num('f_price'),
         compare_at: val('f_compare').trim() === '' ? null : num('f_compare'), stock: num('f_stock'), tag: val('f_tag'),
         active: $('#f_active', dr).checked, featured: $('#f_featured', dr).checked, art: val('f_art'), color: val('f_color'), image,
         description: val('f_desc'), how_to: val('f_how'), ingredients: val('f_ing'),

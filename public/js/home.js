@@ -67,8 +67,9 @@
     renderRail();
   });
   renderRail();
-  $('#prev').onclick = () => rail.scrollBy({ left: -600, behavior: 'smooth' });
-  $('#next').onclick = () => rail.scrollBy({ left: 600, behavior: 'smooth' });
+  const dir = T.ar ? -1 : 1; // the rail runs the other way in Arabic
+  $('#prev').onclick = () => rail.scrollBy({ left: -600 * dir, behavior: 'smooth' });
+  $('#next').onclick = () => rail.scrollBy({ left: 600 * dir, behavior: 'smooth' });
 
   // Marquee: only brands we actually stock, so every name leads to products.
   const row = brands.map(b => `<a class="bp" href="shop.html?brand=${encodeURIComponent(b)}">${esc(b)}</a>`).join('');
@@ -85,7 +86,7 @@
     $('#rStage').innerHTML = RITUAL.map((s, i) => media(s.p).replace('class="media', `data-i="${i}" class="media${i ? '' : ' on'}`)).join('');
     $('#rSteps').innerHTML = RITUAL.map((s, i) => `<article class="step${i ? '' : ' on'}" data-i="${i}">
       <div class="inline-art">${media(s.p)}</div><div class="no">0${i + 1}</div><h3>${s.title}</h3><p>${s.text}</p>
-      <a href="${url(s.p)}">${esc(s.p.name)}</a></article>`).join('');
+      <a href="${url(s.p)}">${esc(A.pname(s.p))}</a></article>`).join('');
     if ('IntersectionObserver' in window) {
       const stepObs = new IntersectionObserver(es => es.forEach(x => {
         if (!x.isIntersecting) return;

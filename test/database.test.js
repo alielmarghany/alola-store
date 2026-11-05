@@ -285,4 +285,17 @@ test('the Alola product list loads and passes every product rule', async () => {
   assert.equal(new Set(rows.map(r => r.name)).size, rows.length, 'no duplicate names');
   assert.equal(rows.filter(r => r.featured).length, 8);
   assert.ok(rows.every(r => r.price >= 90 && r.price <= 1200));
+  await db.exec(sql('products-alola-arabic.sql'));
+  const named = (await db.query("select name, name_ar from products where stock = 20 and rating is null and created_at > now() - interval '1 minute'")).rows;
+  assert.deepEqual(named.filter(r => !r.name_ar).map(r => r.name).filter(n => rows.some(x => x.name === n)), [], 'every product has an Arabic name');
+});
+
+test('customers see Arabic product names in their order history', async () => {
+  await db.query('delete from order_attempts');
+  const a = (t, p) => as('authenticated', SHOPPER_A, t, p);
+  const p = await one(anon("select * from products where name = 'Anua Niacinamide Serum' limit 1"));
+  await a('select place_order($1::jsonb)', [JSON.stringify({ ...buyer, items: [{ id: Number(p.id), qty: 1 }] })]);
+  const newest = (await one(a('select my_orders() r'))).r[0];
+  assert.equal(newest.items[0].name, 'Anua Niacinamide Serum');
+  assert.equal(newest.items[0].name_ar, 'أنوا سيروم نياسيناميد');
 });
