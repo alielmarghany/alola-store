@@ -159,6 +159,17 @@ window.AdminDB = (function () {
       return data.theme;
     },
     setTheme: theme => rpc('admin_set_theme', { p_theme: theme }),
+    liveTheme: () => rpc('current_theme'),
+    themeSchedules: async () => {
+      const { data, error } = await sb.from('theme_schedule').select('*').order('starts_at', { ascending: false });
+      check(error);
+      return data;
+    },
+    addThemeSchedule: (theme, starts, ends) => rpc('admin_add_theme_schedule', { p_theme: theme, p_starts: starts, p_ends: ends }),
+    deleteThemeSchedule: async id => {
+      const { error } = await sb.from('theme_schedule').delete().eq('id', id);
+      check(error);
+    },
     notifications, markRead, listen,
   };
 })();

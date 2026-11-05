@@ -36,9 +36,10 @@
   async function sync() {
     if (!cfg.url) return;
     try {
-      const res = await fetch(`${cfg.url}/rest/v1/store_settings?select=theme`, { headers: { apikey: cfg.anonKey, Authorization: `Bearer ${cfg.anonKey}` } });
+      // The database decides, so a scheduled theme starts and ends on time without anyone being logged in.
+      const res = await fetch(`${cfg.url}/rest/v1/rpc/current_theme`, { method: 'POST', headers: { apikey: cfg.anonKey, Authorization: `Bearer ${cfg.anonKey}`, 'Content-Type': 'application/json' }, body: '{}' });
       if (!res.ok) return;
-      const theme = (await res.json())[0]?.theme || 'default';
+      const theme = (await res.json()) || 'default';
       if (theme !== cached()) { remember(theme); apply(theme); }
     } catch {} // offline or unreachable: keep the last known theme
   }

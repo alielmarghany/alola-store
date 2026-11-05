@@ -602,29 +602,64 @@
       l.href = 'https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Creepster&family=Cinzel+Decorative:wght@700&family=El+Messiri:wght@700&display=swap';
       document.head.append(l);
     }
-    let active;
-    try { active = await db.theme(); } catch (e) { return fail(e); }
+    let active, live, schedules;
+    try { [active, live, schedules] = await Promise.all([db.theme(), db.liveTheme(), db.themeSchedules()]); }
+    catch (e) { return fail(e); }
     if (token !== viewToken) return;
-    const draw = () => {
-      $('#sub').textContent = `Live now: ${THEMES.find(t => t.id === active)?.name || active}`;
-      el.innerHTML = `<div class="themes">${THEMES.map(t => `<article class="th-card${t.id === active ? ' on' : ''}">
+    const nameOf = id => THEMES.find(t => t.id === id)?.name || id;
+    const scheduleState = sc => { const n = Date.now(), a = Date.parse(sc.starts_at), z = Date.parse(sc.ends_at); return n < a ? 'upcoming' : n < z ? 'running' : 'finished'; };
+    const running = schedules.find(sc => scheduleState(sc) === 'running');
+    const rank = { running: 0, upcoming: 1, finished: 2 };
+    const ordered = [...schedules].sort((x, y) => rank[scheduleState(x)] - rank[scheduleState(y)] || (scheduleState(x) === 'upcoming' ? Date.parse(x.starts_at) - Date.parse(y.starts_at) : Date.parse(y.starts_at) - Date.parse(x.starts_at)));
+    const LABEL = { running: ['live', 'Live now'], upcoming: ['pending', 'Scheduled'], finished: ['hidden', 'Finished'] };
+    $('#sub').textContent = running ? `Live now: ${nameOf(live)}, scheduled until ${when(running.ends_at)}` : `Live now: ${nameOf(live)}`;
+    el.innerHTML = `<div class="themes">${THEMES.map(t => `<article class="th-card${t.id === live ? ' on' : ''}">
         <div class="th-sample" style="background:${t.bg};color:${t.ink};font-family:${esc(t.font)}"><span>Glow loud.</span></div>
-        <div class="th-body"><div class="th-title"><h2>${t.name}</h2>${t.id === active ? '<span class="st st-live">Live now</span>' : ''}</div>
+        <div class="th-body"><div class="th-title"><h2>${t.name}</h2>${t.id === live ? '<span class="st st-live">Live now</span>' : t.id === active ? '<span class="st st-hidden">After the schedule</span>' : ''}</div>
           <p>${t.note}</p>
           <div class="th-swatches" aria-hidden="true">${t.colors.map(c => `<i style="background:${c}"></i>`).join('')}</div>
           <small>${t.fontName}</small>
-          <div class="th-acts"><a class="btn ln" href="../index.html?theme=${t.id}" target="_blank" rel="noopener">Preview</a>${t.id === active ? '' : `<button class="btn" data-theme-set="${t.id}">Make live</button>`}</div>
+          <div class="th-acts"><a class="btn ln" href="../index.html?theme=${t.id}" target="_blank" rel="noopener">Preview</a>${t.id === active ? '' : `<button class="btn" data-theme-set="${t.id}">${running ? 'Use after schedule' : 'Make live'}</button>`}</div>
         </div></article>`).join('')}</div>
-        <p class="th-help">Making a theme live changes the store for all visitors straight away. Anyone with a page already open sees it when they return to that page, or within five minutes. Preview only shows you the home page in that theme, and doesn’t change the live store.</p>`;
-      $$('[data-theme-set]', el).forEach(b => b.onclick = async () => {
-        const t = THEMES.find(x => x.id === b.dataset.themeSet);
-        $$('[data-theme-set]', el).forEach(x => x.disabled = true);
-        try { active = await db.setTheme(t.id); toast(`${esc(t.name)} is now live`); }
-        catch (e) { fail(e); }
-        if (token === viewToken) draw();
-      });
+      <p class="th-help">Making a theme live changes the store for all visitors straight away. Anyone with a page already open sees it when they return to that page, or within five minutes. Preview only shows you the home page in that theme, and doesn’t change the live store.</p>
+      <section class="card sch" aria-labelledby="schH"><h2 id="schH">Schedule a theme</h2>
+        <p class="sch-help">Book a theme for set dates. It starts and ends on time by itself, then the store goes back to ${esc(nameOf(active))}. Times are Cairo time.</p>
+        <div class="form-err" id="se" role="alert" hidden></div>
+        <form class="sch-form" id="sf" novalidate>
+          <div class="fld"><label for="s_theme">Theme</label><select class="in" id="s_theme">${THEMES.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}</select></div>
+          <div class="fld"><label for="s_start">Starts</label><input class="in" id="s_start" type="datetime-local" required></div>
+          <div class="fld"><label for="s_end">Ends</label><input class="in" id="s_end" type="datetime-local" required></div>
+          <button class="btn" id="sAdd">Schedule</button>
+        </form>
+        ${ordered.length ? `<div class="tbl-wrap sch-list"><table><thead><tr><th>Theme</th><th>Starts</th><th>Ends</th><th>Status</th><th class="r">Actions</th></tr></thead><tbody>
+          ${ordered.map(sc => { const [cls, label] = LABEL[scheduleState(sc)]; return `<tr><td><b>${esc(nameOf(sc.theme))}</b></td><td class="nowrap">${when(sc.starts_at)}</td><td class="nowrap">${when(sc.ends_at)}</td><td><span class="st st-${cls}">${label}</span></td><td><div class="acts"><button class="del" data-sdel="${sc.id}" aria-label="Delete ${esc(nameOf(sc.theme))} schedule">Delete</button></div></td></tr>`; }).join('')}
+        </tbody></table></div>` : '<div class="sch-empty">No themes scheduled yet.</div>'}
+      </section>`;
+    const reload = () => viewThemes(el, ++viewToken);
+    $$('[data-theme-set]', el).forEach(b => b.onclick = async () => {
+      const t = THEMES.find(x => x.id === b.dataset.themeSet);
+      $$('[data-theme-set]', el).forEach(x => x.disabled = true);
+      try { await db.setTheme(t.id); toast(running ? `${esc(t.name)} will show after the schedule ends` : `${esc(t.name)} is now live`); }
+      catch (e) { fail(e); }
+      if (token === viewToken) reload();
+    });
+    $('#sf', el).onsubmit = async e => {
+      e.preventDefault();
+      const err = $('#se', el), btn = $('#sAdd', el), start = $('#s_start', el).value, end = $('#s_end', el).value, theme = $('#s_theme', el).value;
+      err.hidden = true;
+      const show = m => { err.textContent = m; err.hidden = false; };
+      if (!start || !end) return show('Please choose a start and end time');
+      if (end <= start) return show('The end must be after the start');
+      btn.disabled = true;
+      try { await db.addThemeSchedule(theme, start, end); toast(`${esc(nameOf(theme))} scheduled`); reload(); }
+      catch (ex) { if (!ex.handled) show(ex.message); btn.disabled = false; }
     };
-    draw();
+    $$('[data-sdel]', el).forEach(b => b.onclick = async () => {
+      const sc = schedules.find(x => x.id === Number(b.dataset.sdel));
+      const isRunning = scheduleState(sc) === 'running';
+      if (!(await confirmDialog(`Delete this ${nameOf(sc.theme)} schedule?`, isRunning ? `It’s live now, so the store goes back to ${nameOf(active)} straight away.` : 'It won’t run. You can schedule it again at any time.', 'Delete schedule'))) return;
+      try { await db.deleteThemeSchedule(sc.id); toast('Schedule deleted'); reload(); } catch (e) { fail(e); }
+    });
   }
 
   const VIEWS = { overview: viewOverview, orders: viewOrders, products: viewProducts, customers: viewCustomers, discounts: viewDiscounts, themes: viewThemes };

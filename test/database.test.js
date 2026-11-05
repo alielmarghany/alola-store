@@ -357,6 +357,56 @@ test('only admins can see or manage discount codes', async () => {
   assert.equal((await admin('delete from discount_codes where id=$1 returning id', [made.id])).length, 1);
 });
 
+test('scheduled themes go live on time, in Cairo time, then the store goes back', async () => {
+  const live = async () => (await one(anon('select current_theme() t'))).t;
+  await admin("select admin_set_theme('default')");
+  assert.equal(await live(), 'default');
+  const clear = () => db.query('delete from theme_schedule where true');
+
+  await db.query("insert into theme_schedule (theme,starts_at,ends_at) values ('eid', now() + interval '1 hour', now() + interval '2 hours')");
+  assert.equal(await live(), 'default', 'not started yet');
+  await clear();
+  await db.query("insert into theme_schedule (theme,starts_at,ends_at) values ('eid', now() - interval '1 hour', now() + interval '1 hour')");
+  assert.equal(await live(), 'eid', 'running');
+  await admin("select admin_set_theme('halloween')");
+  assert.equal(await live(), 'eid', 'a running schedule wins over the manual choice');
+  await clear();
+  await db.query("insert into theme_schedule (theme,starts_at,ends_at) values ('eid', now() - interval '2 hours', now() - interval '1 hour')");
+  assert.equal(await live(), 'halloween', 'finished: back to the manual choice');
+  await clear();
+  await admin("select admin_set_theme('default')");
+
+  await admin("select admin_add_theme_schedule('ramadan','2099-03-01T20:00','2099-03-30T23:30')");
+  const row = (await db.query("select to_char(starts_at at time zone 'UTC','HH24:MI') s, to_char(ends_at at time zone 'Africa/Cairo','YYYY-MM-DD HH24:MI') e from theme_schedule")).rows[0];
+  assert.equal(row.e, '2099-03-30 23:30');
+  assert.equal(row.s, '18:00', '20:00 in Cairo is 18:00 UTC in winter');
+  assert.equal((await admin('select * from theme_schedule')).length, 1);
+});
+
+test('schedules refuse bad or overlapping dates', async () => {
+  const add = (t, a, b) => admin('select admin_add_theme_schedule($1,$2,$3)', [t, a, b]);
+  await assert.rejects(add('eid', '2099-03-10T00:00', '2099-03-12T00:00'), /overlaps another/);
+  await assert.rejects(add('nope', '2099-05-01T00:00', '2099-05-02T00:00'), /Unknown theme/);
+  await assert.rejects(add('eid', '2099-05-02T00:00', '2099-05-01T00:00'), /must be after/);
+  await assert.rejects(add('eid', '2020-05-01T00:00', '2020-05-02T00:00'), /already passed/);
+  await assert.rejects(add('eid', 'tomorrow-ish', 'never'), /valid start and end/);
+  await add('eid', '2099-03-30T23:30', '2099-04-03T00:00'); // starts exactly when the last one ends
+  assert.equal((await admin('select * from theme_schedule')).length, 2);
+});
+
+test('only admins can see or change the schedule, and anyone can read the live theme', async () => {
+  await assert.rejects(anon('select * from theme_schedule'), /permission denied/);
+  await assert.rejects(anon("select admin_add_theme_schedule('eid','2100-01-01T00:00','2100-01-02T00:00')"), /permission denied/);
+  await assert.rejects(anon('delete from theme_schedule'), /permission denied/);
+  assert.equal((await stranger('select * from theme_schedule')).length, 0);
+  await assert.rejects(stranger("select admin_add_theme_schedule('eid','2100-01-01T00:00','2100-01-02T00:00')"), /Not authorised/);
+  await assert.rejects(stranger("insert into theme_schedule (theme,starts_at,ends_at) values ('eid',now(),now()+interval '1 day')"), /permission denied/);
+  assert.equal((await stranger('delete from theme_schedule returning id')).length, 0);
+  assert.equal((await db.query('select count(*)::int n from theme_schedule')).rows[0].n, 2);
+  assert.equal((await admin('delete from theme_schedule returning id')).length, 2);
+  assert.ok((await one(anon('select current_theme() t'))).t);
+});
+
 test('clearing sample data leaves real clients and products', async () => {
   await db.exec(sql('clear-sample-data.sql'));
   assert.equal((await db.query("select * from customers where email like '%@example.com'")).rows.length, 0);
