@@ -271,6 +271,92 @@ test('every update and delete in a function has a where clause, which Supabase r
   for (const stmt of writes) assert.match(stmt, /\bwhere\b/i, stmt);
 });
 
+test('discount codes: percentage, amount and free delivery', async () => {
+  await db.query('delete from order_attempts');
+  const p = await one(anon("select * from products where art='lipstick' limit 1")); // 495 EGP
+  const item = [{ id: Number(p.id), qty: 2 }]; // 990: pays 60 delivery
+  const add = (code, type, value, extra = '') => db.query(`insert into discount_codes (code,type,value${extra ? ',' + extra.split('=')[0] : ''}) values ($1,$2,$3${extra ? ',' + extra.split('=')[1] : ''})`, [code, type, value]);
+  await add('TEN', 'percent', 10);
+  await add('FIFTY', 'amount', 50);
+  await add('HUGE', 'amount', 99999);
+  await add('SHIP', 'free_delivery', 0);
+
+  let r = await order({ code: 'ten', items: item, discount: 900, total: 1 }); // lower case works; browser numbers ignored
+  assert.deepEqual([r.subtotal, r.discount, r.shipping, r.total, r.discount_code], [990, 99, 60, 951, 'TEN']);
+  r = await order({ code: ' FIFTY ', items: item });
+  assert.deepEqual([r.discount, r.total], [50, 1000]);
+  r = await order({ code: 'HUGE', items: item });
+  assert.deepEqual([r.discount, r.total], [990, 60], 'never below zero, delivery still charged');
+  r = await order({ code: 'SHIP', items: item });
+  assert.deepEqual([r.discount, r.shipping, r.total], [0, 0, 990]);
+  assert.equal((await db.query("select uses from discount_codes where code='TEN'")).rows[0].uses, 1);
+  const saved = (await one(admin('select admin_get_order($1) r', [Number(r.number.replace('ALO-', '')) - 10000]))).r;
+  assert.equal(saved.discount_code, 'SHIP');
+});
+
+test('discount codes refuse when they should, and change nothing', async () => {
+  await db.query('delete from order_attempts');
+  const p = await one(anon("select * from products where art='lipstick' limit 1"));
+  const item = [{ id: Number(p.id), qty: 1 }];
+  const stock = (await one(anon('select stock from products where id=$1', [p.id]))).stock;
+  await db.exec(`insert into discount_codes (code,type,value,active) values ('OFF','percent',10,false);
+    insert into discount_codes (code,type,value,expires_on) values ('OLD','percent',10,'2020-01-01');
+    insert into discount_codes (code,type,value,min_order) values ('BIG','percent',10,5000);
+    insert into discount_codes (code,type,value,max_uses,uses) values ('DONE','percent',10,5,5);`);
+  await assert.rejects(order({ code: 'NOPE', items: item }), /isn’t valid/);
+  await assert.rejects(order({ code: 'OFF', items: item }), /isn’t valid/);
+  await assert.rejects(order({ code: 'OLD', items: item }), /expired/);
+  await assert.rejects(order({ code: 'BIG', items: item }), /Spend at least 5,000 EGP/);
+  await assert.rejects(order({ code: 'DONE', items: item }), /reached its limit/);
+  const big = await one(anon("select * from products order by price desc limit 1"));
+  await assert.rejects(order({ code: 'SHIP', items: [{ id: Number(big.id), qty: 2 }] }), /already has free delivery/);
+  assert.equal((await one(anon('select stock from products where id=$1', [p.id]))).stock, stock, 'refused orders take no stock');
+
+  const prev = (await one(anon('select preview_discount($1,$2::jsonb) r', ['ten', JSON.stringify(item)]))).r;
+  assert.deepEqual([prev.code, prev.subtotal, prev.discount, prev.total], ['TEN', p.price, Math.round(p.price * 0.1), p.price - Math.round(p.price * 0.1) + 60]);
+  assert.match((await one(anon('select preview_discount($1,$2::jsonb) r', ['NOPE', JSON.stringify(item)]))).r.error, /isn’t valid/);
+  assert.equal((await db.query("select uses from discount_codes where code='DONE'")).rows[0].uses, 5, 'previewing uses nothing');
+});
+
+test('code guessing is limited per visitor', async () => {
+  await db.query('delete from order_attempts');
+  for (let i = 0; i < 30; i++) await anon("select preview_discount('GUESS','[]'::jsonb)");
+  assert.match((await one(anon("select preview_discount('TEN','[]'::jsonb) r"))).r.error, /Too many attempts/);
+  await db.query('delete from order_attempts');
+});
+
+test('cancelling an order gives its discount use back', async () => {
+  await db.query('delete from order_attempts');
+  const uses = async () => (await db.query("select uses from discount_codes where code='FIFTY'")).rows[0].uses;
+  const p = await one(anon("select * from products where art='lipstick' limit 1"));
+  const before = await uses();
+  const r = await order({ code: 'FIFTY', items: [{ id: Number(p.id), qty: 1 }] });
+  const id = Number(r.number.replace('ALO-', '')) - 10000;
+  assert.equal(await uses(), before + 1);
+  await admin("select admin_set_order_status($1,'cancelled')", [id]);
+  assert.equal(await uses(), before);
+  await admin("select admin_set_order_status($1,'pending')", [id]);
+  assert.equal(await uses(), before + 1);
+});
+
+test('only admins can see or manage discount codes', async () => {
+  await assert.rejects(anon('select * from discount_codes'), /permission denied/);
+  await assert.rejects(anon("insert into discount_codes (code,type,value) values ('HACK','percent',100)"), /permission denied/);
+  await assert.rejects(anon("select apply_discount('TEN',100,60,false)"), /permission denied/);
+  assert.equal((await stranger('select * from discount_codes')).length, 0);
+  assert.equal((await as('authenticated', SHOPPER_A, 'select * from discount_codes')).length, 0);
+  await assert.rejects(stranger("insert into discount_codes (code,type,value) values ('HACK','percent',100)"), /row-level security/);
+  assert.equal((await stranger("update discount_codes set value=100 returning id")).length, 0);
+  assert.equal((await stranger('delete from discount_codes returning id')).length, 0);
+  assert.ok((await admin('select * from discount_codes')).length >= 4);
+  await assert.rejects(admin("insert into discount_codes (code,type,value) values ('BADPCT','percent',150)"), /discount_value_fits_type/);
+  await assert.rejects(admin("insert into discount_codes (code,type,value) values ('a b','amount',10)"), /check constraint/);
+  await assert.rejects(admin("insert into discount_codes (code,type,value) values ('TEN','amount',10)"), /duplicate key/);
+  const made = await one(admin("insert into discount_codes (code,type,value) values ('TEMP','amount',10) returning id"));
+  assert.equal((await admin('update discount_codes set active=false where id=$1 returning active', [made.id]))[0].active, false);
+  assert.equal((await admin('delete from discount_codes where id=$1 returning id', [made.id])).length, 1);
+});
+
 test('clearing sample data leaves real clients and products', async () => {
   await db.exec(sql('clear-sample-data.sql'));
   assert.equal((await db.query("select * from customers where email like '%@example.com'")).rows.length, 0);

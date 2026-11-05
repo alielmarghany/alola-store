@@ -30,6 +30,7 @@
     orders: SVG('<path d="M6 7h12l1.500 13h-15zM9 7V5a3 3 0 0 1 6 0v2"/>'),
     products: SVG('<path d="M9 3h6v4H9zM7 7h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/>'),
     customers: SVG('<circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M16 4a4 4 0 0 1 0 8M22 21c0-3-1.500-5-4-5.700"/>'),
+    discounts: SVG('<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9zM8 8v.01M15.500 8.500l-7 7"/>'),
     themes: SVG('<path d="M12 3a9 9 0 1 0 0 18c1.500 0 2-1 2-2 0-1.500-1-2-1-3 0-1 1-2 2-2h2a4 4 0 0 0 4-4c0-4-4-7-9-7z"/><circle cx="7.500" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/>'),
     store: SVG('<path d="M3 10v10h18V10M2 10l2-6h16l2 6zM9 20v-6h6v6"/>'),
     out: SVG('<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h10"/>'),
@@ -73,7 +74,7 @@
   }
 
   // ------------------------------------------------------------ shell + routing
-  const NAV = [['overview', 'Overview'], ['orders', 'Orders'], ['products', 'Products'], ['customers', 'Customers'], ['themes', 'Themes']];
+  const NAV = [['overview', 'Overview'], ['orders', 'Orders'], ['products', 'Products'], ['customers', 'Customers'], ['discounts', 'Discounts'], ['themes', 'Themes']];
   const notif = { unread: 0, rows: [], pop: false };
 
   function renderShell() {
@@ -350,7 +351,8 @@
       <div class="card"><h2>Status</h2><div class="steps" id="steps" role="group" aria-label="Order status">${STATUSES.map(s => `<button data-s="${s}" class="${s === 'cancelled' ? 'can ' : ''}${o.status === s ? 'on' : ''}" aria-pressed="${o.status === s}">${cap(s)}</button>`).join('')}</div>
         <small style="display:block;color:var(--mute);margin-top:8px">Cancelling returns the items to stock and removes the order from revenue.</small></div>
       <div class="card"><h2>Items</h2><div class="rows">${o.items.map(i => `<div class="rw"><span>${esc(i.name)}<small>${esc(i.brand)} · ${i.qty} × ${fmt(i.price)}</small></span><b class="num nowrap">${fmt(i.qty * i.price)}</b></div>`).join('')}
-        <div class="rw"><span style="color:var(--mute)">Delivery</span><span class="num">${o.shipping ? fmt(o.shipping) : 'Free'}</span></div>
+        ${o.discount ? `<div class="rw"><span style="color:var(--mute)">Discount (${esc(o.discount_code)})</span><span class="num">−${fmt(o.discount)}</span></div>` : ''}
+        <div class="rw"><span style="color:var(--mute)">Delivery${o.discount_code && !o.discount ? ` (${esc(o.discount_code)})` : ''}</span><span class="num">${o.shipping ? fmt(o.shipping) : 'Free'}</span></div>
         <div class="rw"><b>Total (cash on delivery)</b><b class="num">${fmt(o.total)}</b></div></div></div>
       <div class="card"><h2>Client</h2><dl class="kv"><dt>Name</dt><dd><a href="#" id="toCust">${esc(o.customer_name)}</a></dd><dt>Phone</dt><dd><a href="tel:${esc(o.phone.replace(/[^+\d]/g, ''))}">${esc(o.phone)}</a></dd><dt>Email</dt><dd><a href="mailto:${esc(o.email)}">${esc(o.email)}</a></dd><dt>Governorate</dt><dd>${esc(o.city)}</dd><dt>Address</dt><dd>${esc(o.address)}</dd>${o.notes ? `<dt>Notes</dt><dd>${esc(o.notes)}</dd>` : ''}</dl></div>`);
     $('#toCust', dr).onclick = e => { e.preventDefault(); openCustomer(o.customer_id); };
@@ -504,6 +506,85 @@
     $$('[data-oid]', dr).forEach(b => b.onclick = () => openOrder(Number(b.dataset.oid)));
   }
 
+  // ------------------------------------------------------------ discount codes
+  const discountState = { rows: [] };
+  const todayCairo = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
+  const discountValue = d => d.type === 'percent' ? `${d.value}% off` : d.type === 'amount' ? `${fmt(d.value)} off` : 'Free delivery';
+  function discountStatus(d) {
+    if (!d.active) return ['hidden', 'Off'];
+    if (d.expires_on && d.expires_on < todayCairo()) return ['out', 'Expired'];
+    if (d.max_uses !== null && d.uses >= d.max_uses) return ['out', 'Used up'];
+    return ['live', 'Active'];
+  }
+  async function viewDiscounts(el, token) {
+    if (!$('#addD', el)) {
+      el.innerHTML = `<div class="bar"><div style="flex:1"></div><button class="btn" id="addD">${I.plus} Add code</button></div><div id="dlist"><div class="skeleton" style="height:240px"></div></div>`;
+      $('#addD').onclick = () => openDiscountForm(null);
+    }
+    try { const rows = await db.discounts(); if (token !== viewToken) return; discountState.rows = rows; }
+    catch (e) { return fail(e); }
+    drawDiscounts();
+  }
+  function drawDiscounts() {
+    const list = $('#dlist'); if (!list) return;
+    const rows = discountState.rows;
+    $('#sub').textContent = `${rows.length} code${rows.length === 1 ? '' : 's'}`;
+    list.innerHTML = rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>Code</th><th>Discount</th><th class="hide-m">Minimum order</th><th class="r">Used</th><th class="hide-m">Expires</th><th>Status</th><th class="r">Actions</th></tr></thead><tbody>
+      ${rows.map(d => { const [cls, label] = discountStatus(d); return `<tr><td class="nowrap"><b>${esc(d.code)}</b></td><td class="nowrap">${esc(discountValue(d))}</td><td class="hide-m num">${d.min_order ? fmt(d.min_order) : 'None'}</td><td class="r num nowrap">${d.uses}${d.max_uses !== null ? ` / ${d.max_uses}` : ''}</td><td class="hide-m nowrap">${d.expires_on ? day(`${d.expires_on}T12:00:00Z`) : 'Never'}</td><td><span class="st st-${cls}">${label}</span></td>
+        <td><div class="acts"><button data-dtoggle="${d.id}">${d.active ? 'Turn off' : 'Turn on'}</button><button data-dedit="${d.id}" aria-label="Edit ${esc(d.code)}">Edit</button><button class="del" data-ddel="${d.id}" aria-label="Delete ${esc(d.code)}">Delete</button></div></td></tr>`; }).join('')}
+      </tbody></table></div>` : '<div class="card empty"><b>No discount codes yet</b>Add a code for a percentage off, an amount off, or free delivery.</div>';
+    $$('[data-dtoggle]', list).forEach(b => b.onclick = async () => {
+      const d = rows.find(x => x.id === Number(b.dataset.dtoggle));
+      b.disabled = true;
+      try { await db.setDiscountActive(d.id, !d.active); toast(`${esc(d.code)} turned ${d.active ? 'off' : 'on'}`); viewDiscounts($('#view'), viewToken); }
+      catch (e) { b.disabled = false; fail(e); }
+    });
+    $$('[data-dedit]', list).forEach(b => b.onclick = () => openDiscountForm(rows.find(x => x.id === Number(b.dataset.dedit))));
+    $$('[data-ddel]', list).forEach(b => b.onclick = async () => {
+      const d = rows.find(x => x.id === Number(b.dataset.ddel));
+      if (!(await confirmDialog(`Delete ${d.code}?`, 'Customers can no longer use it. Past orders keep their discount.', 'Delete code'))) return;
+      try { await db.deleteDiscount(d.id); toast(`${esc(d.code)} deleted`); viewDiscounts($('#view'), viewToken); } catch (e) { fail(e); }
+    });
+  }
+  function openDiscountForm(d) {
+    const isNew = !d;
+    const v = d || { code: '', type: 'percent', value: '', min_order: 0, max_uses: null, expires_on: null, active: true };
+    const dr = openDrawer(`<div class="dr-h"><h2>${isNew ? 'Add discount code' : `Edit ${esc(d.code)}`}</h2>${closeBtn}</div>
+      <form id="df" novalidate><div class="form-err" id="de" role="alert" hidden></div>
+      <div class="card">
+        <div class="fld"><label for="d_code">Code</label><input class="in" id="d_code" required maxlength="30" autocomplete="off" spellcheck="false" style="text-transform:uppercase" placeholder="EID20" value="${esc(v.code)}" ${isNew ? '' : 'readonly'}><small>${isNew ? 'What customers type at checkout. Letters, numbers, - or _.' : 'The code can’t change after it’s created.'}</small></div>
+        <div class="fld"><label for="d_type">Discount type</label><select class="in" id="d_type"><option value="percent" ${v.type === 'percent' ? 'selected' : ''}>Percentage off</option><option value="amount" ${v.type === 'amount' ? 'selected' : ''}>Amount of money off</option><option value="free_delivery" ${v.type === 'free_delivery' ? 'selected' : ''}>Free delivery</option></select></div>
+        <div class="fld" id="d_valueWrap"><label for="d_value" id="d_valueLabel"></label><input class="in" id="d_value" type="number" min="1" step="1" inputmode="numeric" value="${v.type === 'free_delivery' ? '' : v.value}"></div>
+      </div>
+      <div class="card"><h2>Limits (optional)</h2>
+        <div class="f2"><div class="fld"><label for="d_min">Minimum order (EGP)</label><input class="in" id="d_min" type="number" min="0" step="1" inputmode="numeric" placeholder="None" value="${v.min_order || ''}"></div>
+          <div class="fld"><label for="d_max">Usage limit</label><input class="in" id="d_max" type="number" min="1" step="1" inputmode="numeric" placeholder="No limit" value="${v.max_uses ?? ''}"></div></div>
+        <div class="fld"><label for="d_exp">Last day it works</label><input class="in" id="d_exp" type="date" value="${esc(v.expires_on || '')}"></div>
+        <label class="tg"><input type="checkbox" id="d_active" ${v.active ? 'checked' : ''}> Code is on</label>
+      </div>
+      <div class="dr-foot"><button type="button" class="btn ln" data-close>Cancel</button><button class="btn" id="dSave">${isNew ? 'Add code' : 'Save changes'}</button></div></form>`);
+    $$('[data-close]', dr).forEach(b => b.onclick = closeDrawer);
+    const syncType = () => {
+      const t = $('#d_type', dr).value;
+      $('#d_valueWrap', dr).hidden = t === 'free_delivery';
+      $('#d_valueLabel', dr).textContent = t === 'percent' ? 'Percentage off (%)' : 'Amount off (EGP)';
+    };
+    $('#d_type', dr).onchange = syncType; syncType();
+    $('#df', dr).onsubmit = async e => {
+      e.preventDefault();
+      const btn = $('#dSave', dr), err = $('#de', dr);
+      err.hidden = true; btn.disabled = true;
+      const num = (id, empty) => { const s = $(`#${id}`, dr).value.trim(); return s === '' ? empty : Number(s); };
+      const body = { code: $('#d_code', dr).value, type: $('#d_type', dr).value, value: num('d_value', NaN), min_order: num('d_min', 0), max_uses: num('d_max', null), expires_on: $('#d_exp', dr).value, active: $('#d_active', dr).checked };
+      try {
+        await db.saveDiscount(isNew ? null : d.id, body);
+        toast(isNew ? 'Code added' : 'Changes saved');
+        closeDrawer();
+        viewDiscounts($('#view'), viewToken);
+      } catch (ex) { err.textContent = ex.message; err.hidden = false; btn.disabled = false; }
+    };
+  }
+
   // ------------------------------------------------------------ themes
   const THEMES = [
     { id: 'default', name: 'Alola', note: 'The everyday store look.', colors: ['#f6f2e9', '#66794a', '#3b261d', '#c4687c', '#e9d3a6'], bg: 'linear-gradient(135deg,#66794a,#3f4f2c)', ink: '#fff', font: '"Bricolage Grotesque",sans-serif', fontName: 'Bricolage Grotesque + DM Sans' },
@@ -546,7 +627,7 @@
     draw();
   }
 
-  const VIEWS = { overview: viewOverview, orders: viewOrders, products: viewProducts, customers: viewCustomers, themes: viewThemes };
+  const VIEWS = { overview: viewOverview, orders: viewOrders, products: viewProducts, customers: viewCustomers, discounts: viewDiscounts, themes: viewThemes };
 
   // ------------------------------------------------------------ start
   let hashBound = false;

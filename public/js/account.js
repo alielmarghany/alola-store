@@ -139,6 +139,7 @@
   function orderCard(o) {
     return `<article class="ord"><div class="ord-h"><div><b>${esc(o.number)}</b><small>${dateFmt.format(new Date(o.created_at))}</small></div><span class="st st-${esc(o.status)}">${STATUS[o.status] || esc(o.status)}</span></div>
       ${o.items.map(i => `<div class="ord-i"><span>${esc((T.ar && i.name_ar) || i.name)}<small>${esc(i.brand)} · ${i.qty} × ${fmt(i.price)}</small></span><span>${fmt(i.qty * i.price)}</span></div>`).join('')}
+      ${o.discount ? `<div class="ord-i disc"><span>Discount (${esc(o.discount_code)})</span><span>−${fmt(o.discount)}</span></div>` : ''}
       <div class="ord-t"><span>Delivery to ${esc(o.city)}: ${o.shipping ? fmt(o.shipping) : 'Free'}</span><b>${fmt(o.total)}</b></div></article>`;
   }
 

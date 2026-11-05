@@ -210,6 +210,10 @@ html[data-theme] .done .num{background:var(--sage);border-radius:0;color:var(--g
 html[data-theme] .done .wr .tick svg{color:var(--olive)}
 html[data-theme] .st{border-radius:0}
 
+html[data-theme] .code-on{background:var(--sage);border:1px solid var(--line);border-radius:0}
+html[data-theme] #codeBox .err{color:#ff9aa8}
+html[data-theme] .tot.disc,html[data-theme] .ord-i.disc{color:var(--olive)}
+
 /* ---------- Halloween decorations ---------- */
 html[data-theme=halloween]::after{content:"";position:fixed;inset:0;z-index:70;pointer-events:none;background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,.5))}
 html[data-theme=halloween] .main::before{content:"";position:absolute;right:30%;top:-50px;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fffbe6,#f5e6a8 60%,#d8c070);box-shadow:0 0 70px 24px rgba(255,230,150,.3);opacity:.85;z-index:0}

@@ -18,6 +18,7 @@ A cosmetics store and admin dashboard. The site is static files hosted on **GitH
 - Products: add, edit, hide or delete, with photo upload
 - Customers: contact details, total spent and order history
 - Live new-order alerts: bell counter, pop-up, sound, tab title count and optional desktop alerts
+- Discount codes: a percentage off, an amount off or free delivery, with optional minimum order, usage limit and expiry date
 - Themes: switch the live store between the normal look, New Year, Halloween, Ramadan and Eid
 
 ## How it fits together

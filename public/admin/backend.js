@@ -107,7 +107,42 @@ window.AdminDB = (function () {
     return () => sb.removeChannel(channel);
   }
 
+  // ---------------------------------------- discount codes
+  async function discounts() {
+    const { data, error } = await sb.from('discount_codes').select('*').order('id', { ascending: false });
+    check(error);
+    return data;
+  }
+  function cleanDiscount(b) {
+    const code = b.code.trim().toUpperCase();
+    if (!/^[A-Z0-9_-]{3,30}$/.test(code)) throw new Error('Code must be 3 to 30 letters or numbers, with no spaces');
+    const row = { code, type: b.type, value: 0, active: b.active, expires_on: b.expires_on || null, min_order: b.min_order ?? 0, max_uses: b.max_uses ?? null };
+    if (b.type !== 'free_delivery') {
+      if (!Number.isInteger(b.value) || b.value <= 0) throw new Error('Enter a whole number above 0 for the discount');
+      if (b.type === 'percent' && b.value > 100) throw new Error('A percentage can’t be more than 100');
+      row.value = b.value;
+    }
+    if (!Number.isInteger(row.min_order) || row.min_order < 0) throw new Error('Minimum order must be a whole number, 0 or more');
+    if (row.max_uses !== null && (!Number.isInteger(row.max_uses) || row.max_uses <= 0)) throw new Error('Usage limit must be a whole number above 0');
+    return row;
+  }
+  async function saveDiscount(id, body) {
+    const row = cleanDiscount(body);
+    const { error } = id ? await sb.from('discount_codes').update(row).eq('id', id) : await sb.from('discount_codes').insert(row);
+    if (error?.code === '23505') throw new Error('That code already exists');
+    check(error);
+  }
+  async function setDiscountActive(id, active) {
+    const { error } = await sb.from('discount_codes').update({ active }).eq('id', id);
+    check(error);
+  }
+  async function deleteDiscount(id) {
+    const { error } = await sb.from('discount_codes').delete().eq('id', id);
+    check(error);
+  }
+
   return {
+    discounts, saveDiscount, setDiscountActive, deleteDiscount,
     setUnauthorizedHandler: fn => { onUnauthorized = fn; },
     signIn, signOut, hasAdminSession,
     analytics: () => rpc('admin_analytics'),

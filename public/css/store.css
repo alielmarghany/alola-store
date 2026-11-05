@@ -344,6 +344,17 @@ footer.ft{background:#fff;padding:48px 0 28px}
 .done .num{display:inline-block;background:var(--sage);border-radius:99px;padding:8px 18px;font-weight:700;margin-bottom:20px}
 .alert{background:#f9e3e6;color:#7f2a3d;border-radius:14px;padding:12px 16px;margin-bottom:14px;font-size:14px;font-weight:500}
 
+/* ------- discount codes ------- */
+#codeBox{margin:2px 0 14px}
+.code-l{display:block;font-size:13px;font-weight:700;margin-bottom:5px}
+.code-row{display:flex;gap:8px}
+.code-row .in{flex:1;min-width:0;text-transform:uppercase;letter-spacing:.04em}
+.code-row .in::placeholder{text-transform:none;letter-spacing:0}
+.code-row .btn{padding:10px 18px;flex:none}
+.code-on{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--sage);border-radius:14px;padding:10px 14px;font-size:14px}
+#codeBox .err{color:#a33a50;font-size:12.500px;margin-top:6px}
+.tot.disc,.ord-i.disc{color:var(--olive2);font-weight:700}
+
 /* ------- accounts ------- */
 .auth-box{width:min(460px,100%);margin:44px auto 80px;animation:fadeUp .6s var(--ease)}
 .auth-box h1{font-size:clamp(34px,5vw,46px);line-height:1;margin-bottom:6px}

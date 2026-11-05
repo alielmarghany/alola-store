@@ -127,6 +127,11 @@ window.T = (function () {
     'Wrong email or password': 'البريد الإلكتروني أو كلمة المرور غير صحيحة', 'Please confirm your email first. Check your inbox for the link.': 'يرجى تأكيد بريدك أولًا. راجعي الرسالة في بريدك.',
     'That email already has an account. Try logging in.': 'هذا البريد له حساب بالفعل. جربي تسجيل الدخول.', 'Too many attempts. Please wait a few minutes and try again.': 'محاولات كثيرة. يرجى الانتظار بضع دقائق والمحاولة مرة أخرى.',
 
+    // discount codes
+    'Discount code': 'كود الخصم', 'Enter code': 'أدخلي الكود', 'Apply': 'تطبيق', 'Remove': 'إزالة', 'Code applied': 'تم تطبيق الكود',
+    'This code isn’t valid': 'هذا الكود غير صحيح', 'This code has expired': 'انتهت صلاحية هذا الكود', 'This code has reached its limit': 'وصل هذا الكود إلى الحد الأقصى للاستخدام',
+    'Your order already has free delivery': 'طلبك يحصل بالفعل على توصيل مجاني',
+
     // account
     'Create account': 'إنشاء حساب', 'Welcome <em>back</em>': 'أهلًا <em>بعودتك</em>', 'Join <em>Alola</em>': 'انضمي إلى <em>العلا</em>', 'Reset your <em>password</em>': 'إعادة تعيين <em>كلمة المرور</em>',
     'Log in to use your saved details and see your orders.': 'سجلي الدخول لاستخدام بياناتك المحفوظة ومتابعة طلباتك.', 'Save your details once and check out faster every time.': 'احفظي بياناتك مرة واحدة وأتمي طلبك أسرع كل مرة.',
@@ -146,6 +151,9 @@ window.T = (function () {
 
   const count = (n, one, many) => (Number(n) === 1 ? one : `${n} ${many}`);
   const PATTERNS = [
+    [/^Discount \(([A-Z0-9_-]+)\)$/, (_, c) => `خصم (${c})`],
+    [/^Discount code ([A-Z0-9_-]+) applied\.$/, (_, c) => `تم تطبيق كود الخصم ${c}.`],
+    [/^Spend at least ([\d,]+) EGP to use this code$/, (_, n) => `اشتري بما لا يقل عن ${n} ج.م لاستخدام هذا الكود`],
     [/^© (\d+) Alola Cosmetics$/, (_, y) => `© ${y} العلا لمستحضرات التجميل`],
     [/^(\d[\d,]*) products?$/, (_, n) => count(n, 'منتج واحد', 'منتج')],
     [/^Show (\d[\d,]*) products?$/, (_, n) => `عرض ${count(n, 'منتج واحد', 'منتج')}`],

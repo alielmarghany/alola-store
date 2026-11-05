@@ -64,6 +64,9 @@ html[dir=rtl] .ci{animation-name:fadeUp}
 html[dir=rtl] input[type=email],html[dir=rtl] input[type=tel],html[dir=rtl] input[type=password]{direction:ltr;text-align:right}
 html[dir=rtl] input[type=email]::placeholder,html[dir=rtl] input[type=tel]::placeholder{direction:rtl}
 
+html[dir=rtl] .code-row .in,html[dir=rtl] .code-on b{direction:ltr;unicode-bidi:isolate}
+html[dir=rtl] .code-row .in{text-align:right}
+
 /* the brand strip and price slider keep their left-to-right motion */
 html[dir=rtl] .mq,html[dir=rtl] .dual{direction:ltr}
 

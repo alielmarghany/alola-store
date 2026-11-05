@@ -72,5 +72,11 @@ window.Acc = (function () {
     return data;
   }
 
-  return { user, signIn, signUp, signOut, resetPassword, updatePassword, onRecovery, profile, saveProfile, myOrders, placeOrder };
+  async function previewDiscount(code, items) {
+    const { data, error } = await sb.rpc('preview_discount', { p_code: code, p_items: items });
+    if (error) throw fail(error);
+    return data;
+  }
+
+  return { previewDiscount, user, signIn, signUp, signOut, resetPassword, updatePassword, onRecovery, profile, saveProfile, myOrders, placeOrder };
 })();
