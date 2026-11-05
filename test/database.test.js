@@ -44,17 +44,8 @@ before(async () => {
     create table storage.objects (bucket_id text, name text);
     alter table storage.objects enable row level security;
     create publication supabase_realtime;
-    create schema extensions;
-    create schema net;
-    create table net.calls (url text, body jsonb, headers jsonb);
-    create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds int default 1000) returns bigint language plpgsql as $f$
-    begin
-      if url = 'https://broken.test' then raise exception 'network down'; end if;
-      insert into net.calls values (url, body, headers); return 1;
-    end $f$;
   `);
-  // pg_net is a server extension; the stub above stands in for it here.
-  await db.exec(sql('schema.sql').replace(/create extension[^;]+;/, ''));
+  await db.exec(sql('schema.sql'));
   await db.exec(sql('seed.sql'));
   await db.query('insert into admins values ($1)', [ADMIN]);
   await db.query("insert into auth.users values ($1,'shopper.a@test.local'),($2,'shopper.b@test.local')", [SHOPPER_A, SHOPPER_B]);
@@ -364,50 +355,6 @@ test('only admins can see or manage discount codes', async () => {
   const made = await one(admin("insert into discount_codes (code,type,value) values ('TEMP','amount',10) returning id"));
   assert.equal((await admin('update discount_codes set active=false where id=$1 returning active', [made.id]))[0].active, false);
   assert.equal((await admin('delete from discount_codes where id=$1 returning id', [made.id])).length, 1);
-});
-
-test('order emails are queued with the order, and never block it', async () => {
-  await db.query('delete from order_attempts');
-  const p = await one(anon("select * from products where art='lipstick' limit 1"));
-  const item = [{ id: Number(p.id), qty: 1 }];
-  const idOf = r => Number(r.number.replace('ALO-', '')) - 10000;
-  const row = r => db.query('select email_status, email_error, lang from orders where id=$1', [idOf(r)]).then(x => x.rows[0]);
-
-  // Not set up yet: orders work and nothing is queued.
-  let r = await order({ items: item });
-  assert.deepEqual([(await row(r)).email_status, (await db.query('select count(*)::int n from net.calls')).rows[0].n], ['none', 0]);
-
-  await db.query("insert into email_hook values ('https://fn.test','hook-secret')");
-  r = await order({ lang: 'ar', items: item });
-  let saved = await row(r);
-  assert.deepEqual([saved.email_status, saved.lang], ['pending', 'ar']);
-  const call = (await db.query('select * from net.calls order by 1 desc limit 1')).rows[0];
-  assert.equal(call.url, 'https://fn.test');
-  assert.equal(call.body.order_id, idOf(r));
-  assert.equal(call.headers['x-alola-hook'], 'hook-secret');
-
-  r = await order({ lang: 'nonsense', items: item });
-  assert.equal((await row(r)).lang, 'en');
-
-  // Email trouble must not lose the sale.
-  await db.query("update email_hook set url='https://broken.test' where true");
-  r = await order({ items: item });
-  saved = await row(r);
-  assert.equal(saved.email_status, 'failed');
-  assert.match(saved.email_error, /network down/);
-  assert.equal((await db.query('select count(*)::int n from orders where id=$1', [idOf(r)])).rows[0].n, 1);
-  await db.query('delete from email_hook where true');
-});
-
-test('visitors cannot read the email secret or trigger emails', async () => {
-  for (const q of ['select * from email_hook']) {
-    await assert.rejects(anon(q), /permission denied/);
-    await assert.rejects(stranger(q), /permission denied/);
-    await assert.rejects(admin(q), /permission denied/);
-  }
-  await assert.rejects(anon('select queue_order_email(1)'), /permission denied/);
-  await assert.rejects(stranger('select queue_order_email(1)'), /permission denied/);
-  await assert.rejects(anon("update orders set email_status='sent'"), /permission denied/);
 });
 
 test('clearing sample data leaves real clients and products', async () => {

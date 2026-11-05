@@ -112,7 +112,7 @@
     try {
       const data = Object.fromEntries(new FormData(form));
       data.save = !!data.save;
-      const order = await Acc.placeOrder({ ...data, code: appliedCode || '', lang: T.lang, items: cartItems(lines) });
+      const order = await Acc.placeOrder({ ...data, code: appliedCode || '', items: cartItems(lines) });
       A.setCart({});
       success(order);
     } catch (err) {
