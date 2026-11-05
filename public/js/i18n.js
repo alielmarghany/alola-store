@@ -16,7 +16,8 @@ window.T = (function () {
     try { localStorage.setItem(KEY, next); } catch {}
     const u = new URL(location.href);
     u.searchParams.delete('lang');
-    location.href = u.href;
+    // Setting the same address doesn't reload a page whose address has a # part, so reload explicitly.
+    if (u.href === location.href) location.reload(); else location.href = u.href;
   }
 
   document.documentElement.lang = lang;
