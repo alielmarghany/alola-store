@@ -31,14 +31,14 @@ window.T = (function () {
 
   const WORDS = {
     // page titles
-    'Alola | Cosmetics Store': 'ألولا | متجر مستحضرات التجميل',
-    'All products | Alola': 'كل المنتجات | ألولا',
-    'Checkout | Alola': 'إتمام الطلب | ألولا',
-    'My account | Alola': 'حسابي | ألولا',
-    'Product | Alola': 'منتج | ألولا',
+    'Alola | Cosmetics Store': 'العلا | متجر مستحضرات التجميل',
+    'All products | Alola': 'كل المنتجات | العلا',
+    'Checkout | Alola': 'إتمام الطلب | العلا',
+    'My account | Alola': 'حسابي | العلا',
+    'Product | Alola': 'منتج | العلا',
 
     // header + footer
-    'All products': 'كل المنتجات', 'Featured': 'المميزة', 'Brands': 'الماركات', 'Why Alola': 'لماذا ألولا', 'Reviews': 'الآراء', 'Cart': 'السلة',
+    'All products': 'كل المنتجات', 'Featured': 'المميزة', 'Brands': 'الماركات', 'Why Alola': 'لماذا العلا', 'Reviews': 'الآراء', 'Cart': 'السلة',
     'Free delivery on orders over': 'توصيل مجاني للطلبات فوق', '1,000 EGP': '1,000 ج.م', '· Cash on delivery across Egypt': '· الدفع عند الاستلام في كل مصر',
     'Skincare, makeup, hair and fragrance from brands you trust, delivered across Egypt.': 'العناية بالبشرة والمكياج والشعر والعطور من ماركات تثقين بها، مع التوصيل لكل مصر.',
     'Shop': 'تسوقي', 'Store': 'المتجر', 'Staff': 'فريق العمل', 'Admin dashboard': 'لوحة التحكم', 'My account': 'حسابي',
@@ -65,7 +65,7 @@ window.T = (function () {
     'Finish with sunscreen, every single day. It’s the step your future skin thanks you for.': 'اختتمي بواقي الشمس كل يوم. خطوة ستشكرك عليها بشرتك مستقبلًا.',
     'Official brands': 'ماركات رسمية', 'Trusted by <em>top brands</em>': 'موثوقون من <em>أفضل الماركات</em>',
     '100% authentic, sourced from brand distributors. Tap a name to shop it.': 'منتجات أصلية 100% من موزعي الماركات. اضغطي على الاسم للتسوق.',
-    'The basics, done properly': 'الأساسيات كما يجب', 'Why <em>Alola</em>': 'لماذا <em>ألولا</em>',
+    'The basics, done properly': 'الأساسيات كما يجب', 'Why <em>Alola</em>': 'لماذا <em>العلا</em>',
     'Live stock': 'مخزون محدّث', 'If it’s on the site, it’s on our shelf.': 'ما تجدينه على الموقع موجود على رفوفنا.',
     'Fast delivery': 'توصيل سريع', 'Cairo in 24 hours, nationwide in 3 days.': 'القاهرة خلال 24 ساعة، وباقي المحافظات خلال 3 أيام.',
     'Cash on delivery': 'الدفع عند الاستلام', 'Pay when it arrives, not before.': 'ادفعي عند الاستلام، وليس قبله.',
@@ -128,7 +128,7 @@ window.T = (function () {
     'That email already has an account. Try logging in.': 'هذا البريد له حساب بالفعل. جربي تسجيل الدخول.', 'Too many attempts. Please wait a few minutes and try again.': 'محاولات كثيرة. يرجى الانتظار بضع دقائق والمحاولة مرة أخرى.',
 
     // account
-    'Create account': 'إنشاء حساب', 'Welcome <em>back</em>': 'أهلًا <em>بعودتك</em>', 'Join <em>Alola</em>': 'انضمي إلى <em>ألولا</em>', 'Reset your <em>password</em>': 'إعادة تعيين <em>كلمة المرور</em>',
+    'Create account': 'إنشاء حساب', 'Welcome <em>back</em>': 'أهلًا <em>بعودتك</em>', 'Join <em>Alola</em>': 'انضمي إلى <em>العلا</em>', 'Reset your <em>password</em>': 'إعادة تعيين <em>كلمة المرور</em>',
     'Log in to use your saved details and see your orders.': 'سجلي الدخول لاستخدام بياناتك المحفوظة ومتابعة طلباتك.', 'Save your details once and check out faster every time.': 'احفظي بياناتك مرة واحدة وأتمي طلبك أسرع كل مرة.',
     'Enter your email and we’ll send you a link to set a new password.': 'أدخلي بريدك وسنرسل لك رابطًا لتعيين كلمة مرور جديدة.',
     'Password': 'كلمة المرور', 'Forgot your password?': 'نسيتِ كلمة المرور؟', 'At least 8 characters': '8 أحرف على الأقل', 'Send reset link': 'إرسال الرابط', 'Back to log in': 'العودة لتسجيل الدخول', 'Just a moment…': 'لحظة من فضلك…',
@@ -146,7 +146,7 @@ window.T = (function () {
 
   const count = (n, one, many) => (Number(n) === 1 ? one : `${n} ${many}`);
   const PATTERNS = [
-    [/^© (\d+) Alola Cosmetics$/, (_, y) => `© ${y} ألولا لمستحضرات التجميل`],
+    [/^© (\d+) Alola Cosmetics$/, (_, y) => `© ${y} العلا لمستحضرات التجميل`],
     [/^(\d[\d,]*) products?$/, (_, n) => count(n, 'منتج واحد', 'منتج')],
     [/^Show (\d[\d,]*) products?$/, (_, n) => `عرض ${count(n, 'منتج واحد', 'منتج')}`],
     [/^(\d+) items?$/, (_, n) => count(n, 'منتج واحد', 'منتج')],

@@ -10,7 +10,7 @@
   try { products = await A.products(); } catch { return notFound(); }
   const p = products.find(x => x.id === id);
   if (!p) return notFound();
-  document.title = `${A.pname(p)} | ${T.ar ? 'ألولا' : 'Alola'}`;
+  document.title = `${A.pname(p)} | ${T.ar ? 'العلا' : 'Alola'}`;
   const description = A.loc(p, 'description'), howTo = A.loc(p, 'how_to');
 
   const related = products.filter(x => x.id !== p.id).sort((a, b) => (b.category === p.category) - (a.category === p.category)).slice(0, 4);
