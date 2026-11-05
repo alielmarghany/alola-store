@@ -77,7 +77,7 @@ ${sum(t.total, money(o.total), true)}
 </table></td></tr>
 <tr><td style="padding:12px 28px 4px;text-align:${t.align};font-size:14px;line-height:1.6;color:#5c4a3f">
 <strong style="color:#3b261d">${t.payment}:</strong> ${t.cod}<br>
-<strong style="color:#3b261d">${t.deliverTo}:</strong> ${esc(o.address)}، ${esc(city)}<br>
+<strong style="color:#3b261d">${t.deliverTo}:</strong> ${esc(o.address)}${ar ? "، " : ", "}${esc(city)}<br>
 <span dir="ltr">${esc(o.phone)}</span>
 </td></tr>
 <tr><td align="center" style="padding:20px 28px 26px"><a href="${STORE_URL}/" style="display:inline-block;background:#3b261d;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 26px;border-radius:99px">${t.shop}</a></td></tr>
