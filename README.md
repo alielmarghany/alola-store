@@ -36,7 +36,7 @@ The public key in `public/js/config.js` is safe to publish. Access rules in `sup
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the **SQL Editor**, run `supabase/schema.sql`.
-3. Optional: run `supabase/seed.sql` to add 8 test products and a year of made-up orders and clients. Run `supabase/clear-sample-data.sql` to remove the made-up orders and clients later.
+3. Run `supabase/products-alola.sql` to add Alola's 50 products. To try the dashboard with made-up data on a test project instead, run `supabase/seed.sql`.
 4. Under **Authentication > Users**, add a user with your email and password.
 5. Make that user an admin. In the SQL Editor, run this with your email:
    ```sql
@@ -94,7 +94,8 @@ The tests run the real schema and seed in an in-memory Postgres ([PGlite](https:
 
 ## Before going live
 
-- Replace the sample products, ratings and customer reviews with real ones.
+- Set real stock levels: products start at a placeholder of 20 each.
+- Replace the customer reviews on the home page with real ones, and add product photos and descriptions.
 - Only keep claims such as "official brands" and "100% authentic" if they're true.
 - Add your own terms and privacy pages, since the store collects customer details.
 - Free Supabase projects pause after a period of inactivity, and a paused store can't load products or take orders. Use a paid plan for a real store.

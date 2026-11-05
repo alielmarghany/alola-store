@@ -275,3 +275,12 @@ test('clearing sample data leaves real clients and products', async () => {
   assert.equal((await db.query("select * from customers where email = 'buyer@test.local'")).rows.length, 1);
   assert.ok((await db.query('select * from products')).rows.length >= 8);
 });
+
+test('the Alola product list loads and passes every product rule', async () => {
+  await db.exec(sql('products-alola.sql'));
+  const rows = (await db.query("select * from products where stock = 20 and rating is null and created_at > now() - interval '1 minute'")).rows;
+  assert.ok(rows.length >= 50);
+  assert.equal(new Set(rows.map(r => r.name)).size, rows.length, 'no duplicate names');
+  assert.equal(rows.filter(r => r.featured).length, 8);
+  assert.ok(rows.every(r => r.price >= 90 && r.price <= 1200));
+});

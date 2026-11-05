@@ -77,6 +77,8 @@
   $('#sort').value = SORTS[F.sort] ? F.sort : (F.sort = 'featured');
   $('#fRating').innerHTML = [[0, 'Any'], [4, '4★ & up'], [4.5, '4.5★ & up']].map(([v, l]) => `<button class="chip" data-rating="${v}">${l}</button>`).join('');
 
+  $('#fRating').parentElement.hidden = !products.some(p => p.rating); // nothing to filter until products have ratings
+
   let firstRender = true;
   function render() {
     // Facets, with counts reflecting the other active filters

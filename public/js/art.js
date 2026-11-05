@@ -24,31 +24,33 @@
   const rule = (cx, y, w, fill) => `<rect x="${cx - w / 2}" y="${y}" width="${w}" height="1.6" rx=".8" fill="${fill}" opacity=".55"/>`;
   const sub = (cx, y, t, fill) => `<text x="${cx}" y="${y}" text-anchor="middle" font-family="DM Sans,system-ui,sans-serif" font-size="8" letter-spacing="1.4" fill="${fill}" opacity=".78">${esc(t)}</text>`;
 
+  const kind = p => String(p.category || '').toUpperCase();
+
   const SHAPES = {
     dropper: (p, g, c) => `
       <rect x="136" y="38" width="28" height="56" rx="13" fill="url(#${g}k)"/>
       <rect x="128" y="88" width="44" height="36" rx="5" fill="url(#${g}m)"/>
       <path d="M100 150q0-26 24-30h52q24 4 24 30v98q0 18-18 18h-64q-18 0-18-18z" fill="url(#${g}b)"/>
       <rect x="110" y="164" width="80" height="74" rx="4" fill="#fffaf0"/>
-      ${label(p, 150, 194, 70, 15, '#3b261d')}${rule(150, 203, 46, '#3b261d')}${sub(150, 219, 'SERUM', '#3b261d')}
+      ${label(p, 150, 194, 70, 15, '#3b261d')}${rule(150, 203, 46, '#3b261d')}${sub(150, 219, kind(p), '#3b261d')}
       <path d="M110 134q-3 8-3 22v82" stroke="#fff" stroke-opacity=".45" stroke-width="5" fill="none" stroke-linecap="round"/>`,
     pump: (p, g, c) => `
       <path d="M116 56h58q10 0 10 9v4h-30v22h-10V69h-34q-6 0-6-6t12-7z" fill="url(#${g}m)"/>
       <rect x="128" y="90" width="44" height="26" rx="4" fill="url(#${g}m)"/>
       <rect x="92" y="114" width="116" height="152" rx="20" fill="url(#${g}b)"/>
-      ${label(p, 150, 180, 92, 21, c.ink)}${rule(150, 192, 56, c.ink)}${sub(150, 210, 'CLEANSER', c.ink)}
+      ${label(p, 150, 180, 92, 21, c.ink)}${rule(150, 192, 56, c.ink)}${sub(150, 210, kind(p), c.ink)}
       <rect x="102" y="126" width="7" height="128" rx="3.5" fill="#fff" opacity=".6"/>`,
     tube: (p, g, c) => `
       <path d="M86 44h128l-3 14H89z" fill="url(#${g}m)"/>
       <path d="M89 58h122l-27 170h-68z" fill="url(#${g}b)"/>
-      ${label(p, 150, 126, 86, 21, c.ink)}${rule(150, 138, 50, c.ink)}${sub(150, 156, 'SPF 50', c.ink)}
+      ${label(p, 150, 126, 86, 21, c.ink)}${rule(150, 138, 50, c.ink)}${sub(150, 156, kind(p), c.ink)}
       <path d="M104 70l18 148" stroke="#fff" stroke-opacity=".5" stroke-width="6" stroke-linecap="round"/>
       <rect x="112" y="226" width="76" height="40" rx="6" fill="url(#${g}k)"/>`,
     jar: (p, g, c) => `
       <rect x="70" y="104" width="160" height="50" rx="12" fill="url(#${g}k)"/>
       <rect x="80" y="108" width="6" height="42" rx="3" fill="#fff" opacity=".28"/>
       <path d="M78 154h144v90q0 22-22 22H100q-22 0-22-22z" fill="url(#${g}b)"/>
-      ${label(p, 150, 204, 118, 26, c.ink)}${rule(150, 216, 62, c.ink)}${sub(150, 234, 'HAIR MASK', c.ink)}
+      ${label(p, 150, 204, 118, 26, c.ink)}${rule(150, 216, 62, c.ink)}${sub(150, 234, kind(p), c.ink)}
       <rect x="88" y="164" width="7" height="88" rx="3.5" fill="#fff" opacity=".42"/>`,
     lipstick: (p, g, c) => `
       <path d="M128 136V72q0-16 44-34v98z" fill="url(#${g}b)"/>
@@ -78,14 +80,14 @@
       <rect x="78" y="106" width="144" height="160" rx="18" fill="#fff" opacity=".42"/>
       <rect x="86" y="130" width="128" height="128" rx="12" fill="url(#${g}b)"/>
       <rect x="110" y="160" width="80" height="66" rx="3" fill="#fffaf0"/>
-      ${label(p, 150, 190, 66, 19, '#3b261d')}${rule(150, 199, 40, '#3b261d')}${sub(150, 215, 'PARFUM', '#3b261d')}
+      ${label(p, 150, 190, 66, 19, '#3b261d')}${rule(150, 199, 40, '#3b261d')}${sub(150, 215, kind(p), '#3b261d')}
       <rect x="88" y="114" width="7" height="140" rx="3.5" fill="#fff" opacity=".7"/>`,
     bottle: (p, g, c) => `
       <rect x="130" y="44" width="40" height="30" rx="5" fill="url(#${g}k)"/>
       <rect x="134" y="72" width="32" height="34" fill="url(#${g}m)"/>
       <path d="M134 102q-36 12-36 48v96q0 20 20 20h64q20 0 20-20v-96q0-36-36-48z" fill="url(#${g}b)"/>
       <rect x="110" y="166" width="80" height="70" rx="4" fill="#3b261d"/>
-      ${label(p, 150, 196, 68, 17, '#ecd29c')}${rule(150, 206, 44, '#ecd29c')}${sub(150, 222, 'HAIR OIL', '#ecd29c')}
+      ${label(p, 150, 196, 68, 17, '#ecd29c')}${rule(150, 206, 44, '#ecd29c')}${sub(150, 222, kind(p), '#ecd29c')}
       <path d="M108 136q-2 8-2 16v92" stroke="#fff" stroke-opacity=".5" stroke-width="5" fill="none" stroke-linecap="round"/>`,
   };
 

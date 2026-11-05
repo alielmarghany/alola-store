@@ -51,7 +51,7 @@ window.A = (function () {
   const starStr = r => { const n = Math.round(r); return '★'.repeat(n) + '☆'.repeat(5 - n); };
   const rating = p => p.rating_count
     ? `<div class="rt"><span class="st" aria-hidden="true">${starStr(p.rating)}</span><span>${p.rating.toFixed(1)}<span class="cnt"> (${p.rating_count})</span></span><span class="sr">out of 5</span></div>`
-    : `<div class="rt"><span>No ratings yet</span></div>`;
+    : '';
   const price = p => `${fmt(p.price)}${p.compare_at ? `<s>${fmt(p.compare_at)}</s>` : ''}`;
   const url = p => `product.html?id=${p.id}`;
   function tagHtml(p) {

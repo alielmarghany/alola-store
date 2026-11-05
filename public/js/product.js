@@ -14,7 +14,8 @@
 
   const related = products.filter(x => x.id !== p.id).sort((a, b) => (b.category === p.category) - (a.category === p.category)).slice(0, 4);
   const stock = p.stock <= 0 ? ['out', 'Sold out'] : p.stock <= 10 ? ['low', `Only ${p.stock} left`] : ['', 'In stock'];
-  const tabs = [['Description', `<p>${esc(p.description)}</p>`]];
+  const tabs = [];
+  if (p.description) tabs.push(['Description', `<p>${esc(p.description)}</p>`]);
   if (p.how_to) tabs.push(['How to use', `<p>${esc(p.how_to)}</p>`]);
   if (p.ingredients) tabs.push(['Ingredients', `<p>${esc(p.ingredients)}</p><p style="color:var(--mute);margin-top:10px;font-size:13px">Always check the packaging for the most up-to-date ingredient list.</p>`]);
 
@@ -27,7 +28,7 @@
         ${A.rating(p)}
         <div class="pp">${A.price(p)}</div>
         <div class="stk ${stock[0]}"><i></i>${stock[1]} · VAT included</div>
-        <p style="color:var(--mute);max-width:520px">${esc(p.description)}</p>
+        ${p.description ? `<p style="color:var(--mute);max-width:520px">${esc(p.description)}</p>` : ''}
         <div class="buy">
           <div class="qs" role="group" aria-label="Quantity"><button id="qMinus" aria-label="Decrease quantity">−</button><b id="qVal" aria-live="polite">1</b><button id="qPlus" aria-label="Increase quantity">+</button></div>
           <button class="btn ro" id="addBtn" style="padding:14px 34px" ${p.stock <= 0 ? 'disabled' : ''}>${p.stock <= 0 ? 'Sold out' : 'Add to cart'}</button>
@@ -35,7 +36,7 @@
         <div class="ben"><div>${A.ICON.check}Live stock</div><div>${A.ICON.truck}Cairo 24h, nationwide 3 days</div><div>${A.ICON.cash}Cash on delivery</div><div>${A.ICON.leaf}100% authentic</div></div>
       </div>
     </div>
-    <div class="tabs" role="tablist">${tabs.map(([t], i) => `<button role="tab" id="tab${i}" aria-controls="panel${i}" aria-selected="${!i}">${t}</button>`).join('')}</div>
+    ${tabs.length ? `<div class="tabs" role="tablist">` : '<div hidden>'}${tabs.map(([t], i) => `<button role="tab" id="tab${i}" aria-controls="panel${i}" aria-selected="${!i}">${t}</button>`).join('')}</div>
     ${tabs.map(([, h], i) => `<div class="tp" role="tabpanel" id="panel${i}" aria-labelledby="tab${i}" ${i ? 'hidden' : ''}>${h}</div>`).join('')}
     ${related.length ? `<section style="padding-top:30px"><div class="sh"><h2 style="font-size:34px">You may also like</h2></div><div class="grid">${related.map(card).join('')}</div></section>` : ''}`;
 
