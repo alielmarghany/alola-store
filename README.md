@@ -57,12 +57,20 @@ The public key in `public/js/config.js` is safe to publish. Access rules in `sup
 2. Under **Settings > Pages**, set **Source** to **GitHub Actions**.
 3. Each push to `main` runs the tests and deploys the `public` folder.
 
-## Customer account emails
+## Customer emails
 
-Supabase's built-in email sender only delivers to your own Supabase team members, and only a few per hour. That means customers won't receive sign-up confirmation or password reset emails from it.
+Order confirmations go out in the language the customer ordered in. Sign-up and password reset emails come from Supabase and contain both languages. Supabase's built-in sender only reaches your own team, so all of this uses [Brevo](https://www.brevo.com).
 
-- **For testing:** turn off **Confirm email** under **Authentication > Sign In / Providers**. Customers can then sign up and log in straight away, but password reset emails still won't reach them.
-- **For launch:** add a mail service such as Resend or Brevo under **Authentication > SMTP Settings**, then turn **Confirm email** back on.
+1. **Brevo:** create an account and verify your sender address. Sending from your own domain is much less likely to land in spam.
+2. **Order confirmations:** deploy `supabase/functions/order-email`. Under **Edge Functions > Secrets**, set `BREVO_API_KEY` and `EMAIL_FROM`, and optionally `EMAIL_FROM_NAME` and `STORE_URL`. Then run this once in the SQL Editor with your project's reference:
+   ```sql
+   insert into email_hook (url, secret)
+   values ('https://YOUR-PROJECT-REF.supabase.co/functions/v1/order-email', gen_random_uuid()::text);
+   ```
+3. **Password reset and sign-up emails:** enter Brevo's SMTP details under **Authentication > Emails > SMTP Settings**, and turn on **Confirm email**.
+4. **Email design:** paste the files in `supabase/email-templates` into **Authentication > Emails > Templates**.
+
+Each order in the dashboard shows whether its confirmation was sent. An email problem never stops an order going through.
 
 ## Run it locally
 

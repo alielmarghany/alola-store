@@ -79,7 +79,7 @@
       const password = $('#password').value;
       if (!showErrors(password.length < 8 ? { password: 'Use at least 8 characters' } : {})) return;
       const btn = $('#go'); setBusy(btn, true);
-      try { await Acc.updatePassword(password); A.toast('Password updated'); renderAccount(); }
+      try { await Acc.updatePassword(password); recovering = false; history.replaceState(null, '', location.pathname); A.toast('Password updated'); renderAccount(); }
       catch (err) { $('#formErr').textContent = err.message; $('#formErr').hidden = false; setBusy(btn, false); }
     };
   }
@@ -92,6 +92,7 @@
     let profile, orders, cfgGovs;
     try { [profile, orders] = await Promise.all([Acc.profile(), Acc.myOrders()]); }
     catch { root.innerHTML = '<div class="empty"><h3>Your account could not load</h3><p>Please refresh the page.</p></div>'; return; }
+    if (recovering) return; // a password reset link opened meanwhile: keep its form on screen
     cfgGovs = A.GOVERNORATES;
     const first = (profile.name || '').split(' ')[0];
 
@@ -144,10 +145,10 @@
   }
 
   // -------------------------------------------------- start
-  let recovering = false;
+  let recovering = /(^|[#&])type=recovery(&|$)/.test(location.hash);
   Acc.onRecovery(() => { recovering = true; renderNewPassword(); });
   if (!window.ALOLA_CONFIG?.url) { root.innerHTML = '<div class="empty"><h3>Accounts aren’t available yet</h3></div>'; return; }
   const user = await Acc.user().catch(() => null);
-  if (recovering) return;
+  if (recovering) return renderNewPassword();
   if (user) afterLogin(); else renderAuth(params.get('mode') === 'signup' ? 'signup' : 'login');
 })();
