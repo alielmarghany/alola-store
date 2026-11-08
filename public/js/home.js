@@ -1,6 +1,6 @@
 // Landing page.
 (async function () {
-  const { $, $$, esc, card, media, url } = A;
+  const { $, $$, esc, card, url } = A;
   A.mountChrome('home');
   $$('[data-sprig]').forEach(el => el.insertAdjacentHTML('afterbegin', alolaSprig()));
 
@@ -89,9 +89,11 @@
   ].map(s => ({ ...s, p: products.find(p => p.category === 'Skincare' && p.art === s.art) }));
   if (RITUAL.every(s => s.p)) {
     $('#ritualWrap').hidden = false;
-    $('#rStage').innerHTML = RITUAL.map((s, i) => media(s.p).replace('class="media', `data-i="${i}" class="media${i ? '' : ' on'}`)).join('');
+    // Like the hero, this section is decoration: it keeps the drawings even when products have photos.
+    const art = p => `<div class="media">${alolaArt(p)}</div>`;
+    $('#rStage').innerHTML = RITUAL.map((s, i) => art(s.p).replace('class="media', `data-i="${i}" class="media${i ? '' : ' on'}`)).join('');
     $('#rSteps').innerHTML = RITUAL.map((s, i) => `<article class="step${i ? '' : ' on'}" data-i="${i}">
-      <div class="inline-art">${media(s.p)}</div><div class="no">0${i + 1}</div><h3>${s.title}</h3><p>${s.text}</p>
+      <div class="inline-art">${art(s.p)}</div><div class="no">0${i + 1}</div><h3>${s.title}</h3><p>${s.text}</p>
       <a href="${url(s.p)}">${esc(A.pname(s.p))}</a></article>`).join('');
     if ('IntersectionObserver' in window) {
       const stepObs = new IntersectionObserver(es => es.forEach(x => {
