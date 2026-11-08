@@ -30,11 +30,10 @@
 
   // Hero art uses real catalogue items, so it follows edits made in the dashboard.
   const inStock = products.filter(p => p.stock > 0);
-  const heroProduct = inStock.find(p => p.art === 'perfume' && !p.image) || inStock.find(p => !p.image);
+  const heroProduct = inStock.find(p => p.art === 'perfume') || inStock[0];
   if (heroProduct) $('#heroPack').innerHTML = alolaArt(heroProduct);
-  const noPhoto = products.filter(p => !p.image);
-  if (noPhoto[3]) $('#artT2').innerHTML = alolaArt(noPhoto[3]);
-  if (noPhoto[1]) $('#artT3').innerHTML = alolaArt(noPhoto[1]);
+  if (products[3]) $('#artT2').innerHTML = alolaArt(products[3]);
+  if (products[1]) $('#artT3').innerHTML = alolaArt(products[1]);
 
   // Stats
   const brands = [...new Set(products.map(p => p.brand))];
@@ -47,7 +46,7 @@
   let active = null;
   $('#cats').innerHTML = CATS.map(c => {
     const list = products.filter(p => p.category === c);
-    const sample = list.find(p => !p.image);
+    const sample = list[0];
     return `<button class="cat cat-${c}" data-cat="${c}" aria-pressed="false"><b>${c}</b><span>${list.length} item${list.length === 1 ? '' : 's'}</span>${sample ? `<div class="cat-art">${alolaArt(sample)}</div>` : ''}</button>`;
   }).join('');
   const rail = $('#rail');

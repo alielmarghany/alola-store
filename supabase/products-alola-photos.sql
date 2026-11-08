@@ -1,0 +1,4 @@
+-- Product photos from the client's sheet, served with the website from public/assets/products.
+-- If the store moves to another address, change the address below and run this again.
+update products set image = 'https://alielmarghany.github.io/alola-store/assets/products/' || code || '.webp'
+where code in (select c from (values ('11006'),('11917'),('12109'),('12183'),('12564'),('12565'),('12566'),('12860'),('13010'),('13251'),('13252'),('13253'),('13427'),('13428'),('13908'),('13909'),('13910'),('13912'),('13927'),('14058'),('14059'),('14083'),('14495'),('14530'),('14532'),('14561'),('14615'),('14616'),('14680'),('14832'),('14833'),('14834'),('14853'),('15018'),('15460'),('15547'),('16431'),('16609'),('16666'),('17059'),('17239'),('17582'),('17647'),('17853'),('18291'),('18610'),('18642'),('19015'),('19446'),('19660')) v(c));

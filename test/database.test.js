@@ -437,6 +437,9 @@ test('the Alola product list loads and passes every product rule', async () => {
   assert.ok(rows.every(r => r.price >= 90 && r.price <= 1200));
   await db.exec(sql('products-alola-arabic.sql'));
   await db.exec(sql('products-alola-codes.sql'));
+  await db.exec(sql('products-alola-photos.sql'));
+  const pictured = (await db.query("select image from products where stock = 20 and rating is null and created_at > now() - interval '1 minute' and image like 'https://%/assets/products/%.webp'")).rows;
+  assert.ok(pictured.length >= 50, 'every product has its photo');
   const coded = (await db.query("select name, code from products where stock = 20 and rating is null and created_at > now() - interval '1 minute'")).rows;
   assert.equal(new Set(coded.filter(r => rows.some(x => x.name === r.name)).map(r => r.code)).size, rows.length, 'every product has its own code');
   const named = (await db.query("select name, name_ar from products where stock = 20 and rating is null and created_at > now() - interval '1 minute'")).rows;

@@ -143,6 +143,7 @@ html[data-theme] .cat b{font-size:24px}
 html[data-theme] .card{background:var(--card);border:2px solid var(--pu);border-radius:0}
 html[data-theme] .card:hover{border-color:var(--rose);box-shadow:7px 7px 0 var(--rose)}
 html[data-theme] .ph{border-bottom:2px solid var(--pu)}
+html[data-theme] .ph:has(.media.photo),html[data-theme] .gm:has(.media.photo),html[data-theme] .ci .thumb:has(.photo){background:#fff}
 html[data-theme] .ph-Skincare{background:linear-gradient(145deg,var(--ph1))}
 html[data-theme] .ph-Makeup{background:linear-gradient(145deg,var(--ph2))}
 html[data-theme] .ph-Hair{background:linear-gradient(145deg,var(--ph3))}
