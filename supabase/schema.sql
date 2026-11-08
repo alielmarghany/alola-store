@@ -377,6 +377,36 @@ begin
   return p_theme;
 end $$;
 
+-- Updates prices and stock from the shop's own item sheet, matching rows by product code.
+-- Each row is {code, price, stock}; a missing price or stock leaves that value as it is.
+-- Prices are rounded to whole pounds. Returns how many products changed.
+create function admin_import_sheet(p_rows jsonb) returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_updated integer;
+begin
+  perform require_admin();
+  if jsonb_typeof(p_rows) is distinct from 'array' or jsonb_array_length(p_rows) = 0 then raise exception 'The sheet has no rows'; end if;
+  if jsonb_array_length(p_rows) > 20000 then raise exception 'The sheet is too large (20,000 rows at most)'; end if;
+  with s as (
+    select distinct on (btrim(code)) btrim(code) code, price, stock
+    from jsonb_to_recordset(p_rows) as x(code text, price numeric, stock numeric)
+    where nullif(btrim(code), '') is not null
+    order by btrim(code)
+  ), n as (
+    select p.id,
+      coalesce(case when s.price >= 1 and s.price <= 1000000 then round(s.price)::integer end, p.price) np,
+      coalesce(case when s.stock is not null and s.stock <= 1000000 then greatest(floor(s.stock), 0)::integer end, p.stock) ns
+    from products p join s on s.code = p.code
+  ), upd as (
+    update products p set price = n.np, stock = n.ns,
+      compare_at = case when p.compare_at > n.np then p.compare_at end -- a sale price that is no longer below the original is dropped
+    from n where p.id = n.id and (p.price <> n.np or p.stock <> n.ns)
+    returning p.id
+  )
+  select count(*) into v_updated from upd;
+  return jsonb_build_object('updated', v_updated);
+end $$;
+
 -- Times come in as Cairo local time, whatever timezone the admin's computer is set to.
 create function admin_add_theme_schedule(p_theme text, p_starts text, p_ends text) returns void language plpgsql security definer set search_path = public as $$
 declare
@@ -560,7 +590,7 @@ grant execute on function preview_discount(text, jsonb) to anon, authenticated;
 grant execute on function current_theme() to anon, authenticated;
 grant execute on function admin_add_theme_schedule(text, text, text) to authenticated;
 grant execute on function admin_analytics(), admin_list_products(), admin_list_orders(text, text, integer), admin_get_order(bigint),
-  admin_set_order_status(bigint, text), admin_set_theme(text), admin_list_customers(text, text, integer), admin_get_customer(bigint) to authenticated;
+  admin_set_order_status(bigint, text), admin_set_theme(text), admin_list_customers(text, text, integer), admin_get_customer(bigint), admin_import_sheet(jsonb) to authenticated;
 
 -- ---------------------------------------------------------------- live notifications
 alter publication supabase_realtime add table notifications;

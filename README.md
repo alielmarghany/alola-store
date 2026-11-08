@@ -16,6 +16,7 @@ A cosmetics store and admin dashboard. The site is static files hosted on **GitH
 - Revenue per day and per month, orders, number of clients, top products and low stock
 - Orders: search, view details and change status
 - Products: add, edit, hide or delete, with photo upload
+- Update from sheet: upload the item sheet exported from the shop's stock system (Excel, CSV or PDF). Products are matched by product code (كود الصنف), and their price (سعر البيع) and stock (الرصيد or الكمية) are updated after you check a preview of every change
 - Customers: contact details, total spent and order history
 - Live new-order alerts: bell counter, pop-up, sound, tab title count and optional desktop alerts
 - Discount codes: a percentage off, an amount off or free delivery, with optional minimum order, usage limit and expiry date

@@ -421,6 +421,32 @@ test('product codes are unique, and orders show them to admins', async () => {
   await admin('update products set code=null where id=$1', [a]);
 });
 
+test('the item sheet updates price and stock by product code, for admins only', async () => {
+  const [a, b] = (await anon('select id, price, stock from products order by id limit 2'));
+  await admin("update products set code='SH-1', compare_at=null where id=$1", [a.id]);
+  await admin("update products set code='SH-2', compare_at=$2 where id=$1", [b.id, b.price + 50]);
+  const rows = [
+    { code: ' SH-1 ', price: 115.43, stock: 7.9 }, // codes are trimmed; prices round, stock rounds down
+    { code: 'SH-2', price: b.price + 80, stock: null }, // no stock column: stock stays; sale price above the original is dropped
+    { code: 'NOT-OURS', price: 10, stock: 3 },
+    { code: '', price: 10, stock: 3 },
+  ];
+  await assert.rejects(stranger('select admin_import_sheet($1::jsonb)', [JSON.stringify(rows)]), /Not authorised/);
+  await assert.rejects(anon('select admin_import_sheet($1::jsonb)', [JSON.stringify(rows)]), /permission denied/);
+  await assert.rejects(admin("select admin_import_sheet('[]'::jsonb)"), /no rows/);
+  const r = (await one(admin('select admin_import_sheet($1::jsonb) r', [JSON.stringify(rows)]))).r;
+  assert.equal(r.updated, 2);
+  const after = await anon('select id, price, stock, compare_at from products where id = any($1) order by id', [[a.id, b.id]]);
+  assert.deepEqual(after.map(p => [p.price, p.stock]), [[115, 7], [b.price + 80, b.stock]]);
+  assert.equal(after[1].compare_at, null);
+  // Same sheet again changes nothing; a negative stock becomes 0; a zero price is ignored.
+  assert.equal((await one(admin('select admin_import_sheet($1::jsonb) r', [JSON.stringify(rows)]))).r.updated, 0);
+  await admin("select admin_import_sheet('[{\"code\":\"SH-1\",\"price\":0,\"stock\":-4}]'::jsonb)");
+  assert.deepEqual(await anon('select price, stock from products where id=$1', [a.id]), [{ price: 115, stock: 0 }]);
+  await admin('update products set code=null, price=$2, stock=$3 where id=$1', [a.id, a.price, a.stock]);
+  await admin('update products set code=null, price=$2, stock=$3 where id=$1', [b.id, b.price, b.stock]);
+});
+
 test('clearing sample data leaves real clients and products', async () => {
   await db.exec(sql('clear-sample-data.sql'));
   assert.equal((await db.query("select * from customers where email like '%@example.com'")).rows.length, 0);

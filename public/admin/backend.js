@@ -154,6 +154,7 @@ window.AdminDB = (function () {
     customer: id => rpc('admin_get_customer', { p_id: id }),
     products: () => rpc('admin_list_products'),
     saveProduct, deleteProduct, upload,
+    importSheet: rows => rpc('admin_import_sheet', { p_rows: rows }),
     theme: async () => {
       const { data, error } = await sb.from('store_settings').select('theme').single();
       check(error);

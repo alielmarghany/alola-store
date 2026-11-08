@@ -266,3 +266,5 @@ dialog .row{display:flex;gap:10px;justify-content:flex-end}
   .chart{height:230px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+.note{color:var(--mute);font-size:14px;line-height:1.5}
+.note b{color:var(--ink)}

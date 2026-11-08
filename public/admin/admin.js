@@ -37,6 +37,7 @@
     bell: SVG('<path d="M6 10a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0"/>'),
     x: SVG('<path d="M6 6l12 12M18 6 6 18"/>'),
     plus: SVG('<path d="M12 5v14M5 12h14"/>'),
+    sheet: SVG('<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8zM14 3v5h5M8 13h8M8 17h8M12 10v10"/>'),
   };
 
   // ------------------------------------------------------------ API
@@ -376,9 +377,10 @@
   const productsState = { q: '', rows: [] };
   async function viewProducts(el, token) {
     if (!$('#pq', el)) {
-      el.innerHTML = `<div class="bar"><input class="in grow" id="pq" type="search" placeholder="Search name, brand or code" aria-label="Search products" value="${esc(productsState.q)}"><div style="flex:1"></div><button class="btn" id="addP">${I.plus} Add product</button></div><div id="plist"><div class="skeleton" style="height:360px"></div></div>`;
+      el.innerHTML = `<div class="bar"><input class="in grow" id="pq" type="search" placeholder="Search name, brand or code" aria-label="Search products" value="${esc(productsState.q)}"><div style="flex:1"></div><button class="btn ln" id="impP">${I.sheet} Update from sheet</button><button class="btn" id="addP">${I.plus} Add product</button></div><div id="plist"><div class="skeleton" style="height:360px"></div></div>`;
       $('#pq').oninput = e => { productsState.q = e.target.value; drawProducts(); };
       $('#addP').onclick = () => openProductForm(null);
+      $('#impP').onclick = openSheetImport;
     }
     try { const rows = await db.products(); if (token !== viewToken) return; productsState.rows = rows; }
     catch (e) { return fail(e); }
@@ -403,6 +405,78 @@
       if (!(await confirmDialog(`Delete ${p.name}?`, 'It disappears from the store straight away. Past orders keep their record of it. To take it down temporarily, edit it and untick “Show in store” instead.', 'Delete product'))) return;
       try { await db.deleteProduct(p); toast(`${p.name} deleted`); viewProducts($('#view'), viewToken); } catch (e) { fail(e); }
     });
+  }
+
+  // ------------------------------------------------------------ update prices and stock from the shop's item sheet
+  function openSheetImport() {
+    const dr = openDrawer(`<div class="dr-h"><h2>Update from sheet</h2>${closeBtn}</div>
+      <div class="form-err" id="ie" role="alert" hidden></div>
+      <div class="card"><h2>1. Choose the sheet</h2>
+        <p class="note">Export the item list from your stock system as Excel, CSV or PDF. Products are matched by their <b>product code</b> (كود الصنف). Prices use the selling price column (سعر البيع) and stock uses the balance column (الرصيد or الكمية), when the sheet has them.</p>
+        <div class="up"><label class="btn ln" style="cursor:pointer">Choose file<input type="file" id="i_file" accept=".xlsx,.xls,.csv,.pdf" class="sr"></label><span class="note" id="i_name"></span></div>
+      </div>
+      <div id="i_out"></div>`);
+    let sheet = null;
+    $('#i_file', dr).onchange = async e => {
+      const file = e.target.files[0]; e.target.value = '';
+      if (!file) return;
+      $('#ie', dr).hidden = true;
+      $('#i_name', dr).textContent = `Reading ${file.name}…`;
+      $('#i_out', dr).innerHTML = '';
+      try {
+        sheet = await SheetImport.read(file);
+        if (!productsState.rows.length) productsState.rows = await db.products();
+        $('#i_name', dr).innerHTML = `<bdi>${esc(file.name)}</bdi>: ${sheet.rows.length.toLocaleString()} items`;
+        draw();
+      } catch (ex) { sheet = null; $('#i_name', dr).textContent = ''; showErr(ex.message); }
+    };
+    const showErr = m => { const el = $('#ie', dr); el.textContent = m; el.hidden = false; el.scrollIntoView({ block: 'center' }); };
+
+    function plan(usePrice, useStock) {
+      const byCode = new Map(sheet.rows.map(r => [r.code, r]));
+      const changes = [], missing = [];
+      for (const p of productsState.rows) {
+        if (!p.code) continue;
+        const r = byCode.get(p.code);
+        if (!r) { missing.push(p); continue; }
+        const price = usePrice && r.price >= 1 && r.price <= 1e6 ? Math.round(r.price) : p.price;
+        const stock = useStock && r.stock !== null && r.stock <= 1e6 ? Math.max(Math.floor(r.stock), 0) : p.stock;
+        if (price !== p.price || stock !== p.stock) changes.push({ p, r, price, stock });
+      }
+      return { changes, missing, noCode: productsState.rows.filter(p => !p.code) };
+    }
+    function draw() {
+      const out = $('#i_out', dr);
+      const prev = { price: $('#i_price', dr)?.checked ?? sheet.hasPrice, stock: $('#i_stock', dr)?.checked ?? sheet.hasStock };
+      const usePrice = sheet.hasPrice && prev.price, useStock = sheet.hasStock && prev.stock;
+      const { changes, missing, noCode } = plan(usePrice, useStock);
+      const arrow = (a, b, f = x => x) => a === b ? `<span class="num">${f(a)}</span>` : `<span class="num"><s style="color:var(--mute)">${f(a)}</s> → <b>${f(b)}</b></span>`;
+      out.innerHTML = `<div class="card"><h2>2. What to update</h2>
+          <label class="tg"><input type="checkbox" id="i_price" ${usePrice ? 'checked' : ''} ${sheet.hasPrice ? '' : 'disabled'}> Prices ${sheet.hasPrice ? '' : '<span class="note">(this sheet has no price column)</span>'}</label>
+          <label class="tg"><input type="checkbox" id="i_stock" ${useStock ? 'checked' : ''} ${sheet.hasStock ? '' : 'disabled'}> Stock ${sheet.hasStock ? '' : '<span class="note">(this sheet has no stock column, so stock stays as it is)</span>'}</label>
+        </div>
+        <div class="card"><h2>3. Check the changes</h2>
+          ${changes.length ? `<p class="note">${changes.length} of your ${productsState.rows.length} products will change.</p>
+          <div class="tbl-wrap"><table><thead><tr><th>Product</th>${usePrice ? '<th class="r">Price</th>' : ''}${useStock ? '<th class="r">Stock</th>' : ''}</tr></thead><tbody>
+            ${changes.map(c => `<tr><td><b>${esc(c.p.name)}</b><small style="color:var(--mute);display:block">Code ${esc(c.p.code)}${c.r.name ? ` · <bdi>${esc(c.r.name)}</bdi>` : ''}</small></td>${usePrice ? `<td class="r nowrap">${arrow(c.p.price, c.price, fmt)}</td>` : ''}${useStock ? `<td class="r nowrap">${arrow(c.p.stock, c.stock)}</td>` : ''}</tr>`).join('')}
+          </tbody></table></div>` : `<div class="empty"><b>Nothing to change</b>Every matched product already has these ${[usePrice && 'prices', useStock && 'stock levels'].filter(Boolean).join(' and ') || 'values'}.</div>`}
+          ${missing.length ? `<p class="note" style="margin-top:14px"><b>Not in the sheet (${missing.length}):</b> ${missing.map(p => `${esc(p.name)} (${esc(p.code)})`).join(', ')}. These stay as they are. Check their codes if they should be in it.</p>` : ''}
+          ${noCode.length ? `<p class="note"><b>No product code (${noCode.length}):</b> ${noCode.map(p => esc(p.name)).join(', ')}. Add a code to update them from the sheet.</p>` : ''}
+        </div>
+        <div class="dr-foot"><button type="button" class="btn ln" data-close>Cancel</button><button class="btn" id="i_go" ${changes.length ? '' : 'disabled'}>Update ${changes.length} product${changes.length === 1 ? '' : 's'}</button></div>`;
+      $$('[data-close]', out).forEach(b => b.onclick = closeDrawer);
+      $('#i_price', dr).onchange = $('#i_stock', dr).onchange = draw;
+      $('#i_go', dr).onclick = async e => {
+        e.target.disabled = true;
+        const rows = changes.map(c => ({ code: c.p.code, price: usePrice ? c.r.price : null, stock: useStock ? c.r.stock : null }));
+        try {
+          const r = await db.importSheet(rows);
+          toast(`${r.updated} product${r.updated === 1 ? '' : 's'} updated from the sheet`);
+          closeDrawer();
+          viewProducts($('#view'), viewToken);
+        } catch (ex) { showErr(ex.message); e.target.disabled = false; }
+      };
+    }
   }
 
   const ARTS = [['dropper', 'Dropper bottle'], ['pump', 'Pump bottle'], ['tube', 'Tube'], ['jar', 'Jar'], ['lipstick', 'Lipstick'], ['mascara', 'Mascara'], ['perfume', 'Perfume'], ['bottle', 'Bottle']];
