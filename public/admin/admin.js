@@ -350,7 +350,7 @@
     const dr = openDrawer(`<div class="dr-h"><div><h2>${o.number}</h2><div style="color:var(--mute)">${when(o.created_at)}</div></div>${closeBtn}</div>
       <div class="card"><h2>Status</h2><div class="steps" id="steps" role="group" aria-label="Order status">${STATUSES.map(s => `<button data-s="${s}" class="${s === 'cancelled' ? 'can ' : ''}${o.status === s ? 'on' : ''}" aria-pressed="${o.status === s}">${cap(s)}</button>`).join('')}</div>
         <small style="display:block;color:var(--mute);margin-top:8px">Cancelling returns the items to stock and removes the order from revenue.</small></div>
-      <div class="card"><h2>Items</h2><div class="rows">${o.items.map(i => `<div class="rw"><span>${esc(i.name)}<small>${esc(i.brand)} · ${i.qty} × ${fmt(i.price)}</small></span><b class="num nowrap">${fmt(i.qty * i.price)}</b></div>`).join('')}
+      <div class="card"><h2>Items</h2><div class="rows">${o.items.map(i => `<div class="rw"><span>${esc(i.name)}<small>${i.code ? `Code ${esc(i.code)} · ` : ''}${esc(i.brand)} · ${i.qty} × ${fmt(i.price)}</small></span><b class="num nowrap">${fmt(i.qty * i.price)}</b></div>`).join('')}
         ${o.discount ? `<div class="rw"><span style="color:var(--mute)">Discount (${esc(o.discount_code)})</span><span class="num">−${fmt(o.discount)}</span></div>` : ''}
         <div class="rw"><span style="color:var(--mute)">Delivery${o.discount_code && !o.discount ? ` (${esc(o.discount_code)})` : ''}</span><span class="num">${o.shipping ? fmt(o.shipping) : 'Free'}</span></div>
         <div class="rw"><b>Total (cash on delivery)</b><b class="num">${fmt(o.total)}</b></div></div></div>
@@ -376,7 +376,7 @@
   const productsState = { q: '', rows: [] };
   async function viewProducts(el, token) {
     if (!$('#pq', el)) {
-      el.innerHTML = `<div class="bar"><input class="in grow" id="pq" type="search" placeholder="Search products or brands" aria-label="Search products" value="${esc(productsState.q)}"><div style="flex:1"></div><button class="btn" id="addP">${I.plus} Add product</button></div><div id="plist"><div class="skeleton" style="height:360px"></div></div>`;
+      el.innerHTML = `<div class="bar"><input class="in grow" id="pq" type="search" placeholder="Search name, brand or code" aria-label="Search products" value="${esc(productsState.q)}"><div style="flex:1"></div><button class="btn" id="addP">${I.plus} Add product</button></div><div id="plist"><div class="skeleton" style="height:360px"></div></div>`;
       $('#pq').oninput = e => { productsState.q = e.target.value; drawProducts(); };
       $('#addP').onclick = () => openProductForm(null);
     }
@@ -387,11 +387,11 @@
   const thumb = p => `<div class="th ph-${esc(p.category)}">${p.image ? `<img src="${esc(p.image)}" alt="">` : alolaArt(p)}</div>`;
   function drawProducts() {
     const q = productsState.q.trim().toLowerCase();
-    const rows = productsState.rows.filter(p => !q || `${p.name} ${p.brand} ${p.category}`.toLowerCase().includes(q));
+    const rows = productsState.rows.filter(p => !q || `${p.name} ${p.brand} ${p.category} ${p.code || ''}`.toLowerCase().includes(q));
     $('#sub').textContent = `${productsState.rows.length} product${productsState.rows.length === 1 ? '' : 's'}`;
     const list = $('#plist'); if (!list) return;
     list.innerHTML = rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>Product</th><th class="hide-m">Category</th><th class="r">Price</th><th>Stock</th><th class="hide-m r">Sold</th><th class="hide-m">Status</th><th class="r">Actions</th></tr></thead><tbody>
-      ${rows.map(p => `<tr><td><div class="prod-t">${thumb(p)}<span><b>${esc(p.name)}</b><small style="color:var(--mute)">${esc(p.brand)}${p.featured ? ' · Featured' : ''}</small></span></div></td>
+      ${rows.map(p => `<tr><td><div class="prod-t">${thumb(p)}<span><b>${esc(p.name)}</b><small style="color:var(--mute)">${p.code ? `Code ${esc(p.code)} · ` : ''}${esc(p.brand)}${p.featured ? ' · Featured' : ''}</small></span></div></td>
         <td class="hide-m">${esc(p.category)}</td><td class="r num nowrap">${fmt(p.price)}${p.compare_at ? `<small><s>${fmt(p.compare_at)}</s></small>` : ''}</td>
         <td>${p.stock <= 0 ? '<span class="st st-out">Sold out</span>' : p.stock <= 10 ? `<span class="st st-low">${p.stock} left</span>` : `<span class="num">${p.stock}</span>`}</td>
         <td class="hide-m r num">${p.sold.toLocaleString()}</td><td class="hide-m"><span class="st st-${p.active ? 'live' : 'hidden'}">${p.active ? 'Live' : 'Hidden'}</span></td>
@@ -409,12 +409,13 @@
   const ACOLORS = ['cream', 'white', 'olive', 'rose', 'amber', 'gold', 'ink', 'sky', 'plum'];
   function openProductForm(p) {
     const isNew = !p;
-    const v = p || { name: '', name_ar: '', description_ar: '', how_to_ar: '', brand: '', category: 'Skincare', price: '', compare_at: '', stock: '', description: '', how_to: '', ingredients: '', art: 'bottle', color: 'cream', image: null, tag: '', featured: false, active: true };
+    const v = p || { code: '', name: '', name_ar: '', description_ar: '', how_to_ar: '', brand: '', category: 'Skincare', price: '', compare_at: '', stock: '', description: '', how_to: '', ingredients: '', art: 'bottle', color: 'cream', image: null, tag: '', featured: false, active: true };
     const brands = [...new Set(productsState.rows.map(x => x.brand))];
     const dr = openDrawer(`<div class="dr-h"><h2>${isNew ? 'Add product' : 'Edit product'}</h2>${closeBtn}</div>
       <form id="pf" novalidate><div class="form-err" id="pe" role="alert" hidden></div>
       <div class="card"><h2>Details</h2>
         <div class="fld"><label for="f_name">Name</label><input class="in" id="f_name" required maxlength="120" value="${esc(v.name)}"></div>
+        <div class="fld"><label for="f_code">Product code</label><input class="in" id="f_code" maxlength="40" autocomplete="off" spellcheck="false" placeholder="Optional" value="${esc(v.code || '')}"><small>Your own code for this product. Each product needs a different one.</small></div>
         <div class="fld"><label for="f_name_ar">Name in Arabic</label><input class="in" id="f_name_ar" dir="rtl" maxlength="120" value="${esc(v.name_ar)}"></div>
         <div class="f2"><div class="fld"><label for="f_brand">Brand</label><input class="in" id="f_brand" required maxlength="60" list="brandList" value="${esc(v.brand)}"><datalist id="brandList">${brands.map(b => `<option value="${esc(b)}">`).join('')}</datalist></div>
           <div class="fld"><label for="f_category">Category</label><select class="in" id="f_category">${['Skincare', 'Makeup', 'Hair', 'Fragrance'].map(c => `<option ${v.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div>
@@ -462,7 +463,7 @@
       err.hidden = true; btn.disabled = true;
       const num = id => { const s = val(id).trim(); return s === '' ? NaN : Number(s); };
       const body = {
-        name: val('f_name'), name_ar: val('f_name_ar').trim(), description_ar: val('f_desc_ar').trim(), how_to_ar: val('f_how_ar').trim(), brand: val('f_brand'), category: val('f_category'), price: num('f_price'),
+        code: val('f_code').trim() || null, name: val('f_name'), name_ar: val('f_name_ar').trim(), description_ar: val('f_desc_ar').trim(), how_to_ar: val('f_how_ar').trim(), brand: val('f_brand'), category: val('f_category'), price: num('f_price'),
         compare_at: val('f_compare').trim() === '' ? null : num('f_compare'), stock: num('f_stock'), tag: val('f_tag'),
         active: $('#f_active', dr).checked, featured: $('#f_featured', dr).checked, art: val('f_art'), color: val('f_color'), image,
         description: val('f_desc'), how_to: val('f_how'), ingredients: val('f_ing'),

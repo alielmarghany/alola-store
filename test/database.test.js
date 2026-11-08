@@ -407,6 +407,20 @@ test('only admins can see or change the schedule, and anyone can read the live t
   assert.ok((await one(anon('select current_theme() t'))).t);
 });
 
+test('product codes are unique, and orders show them to admins', async () => {
+  await db.query('delete from order_attempts');
+  const [a, b] = (await anon('select id from products where stock > 5 order by id limit 2')).map(r => r.id);
+  assert.ok(a && b && a !== b);
+  await admin("update products set code='ZZ-1' where id=$1", [a]);
+  await assert.rejects(admin("update products set code='ZZ-1' where id=$1", [b]), /duplicate key/);
+  await assert.rejects(admin("update products set code=$2 where id=$1", [b, 'x'.repeat(41)]), /check constraint/);
+  assert.equal((await stranger("update products set code='HACK' where id=$1 returning id", [a])).length, 0);
+  const r = await order({ items: [{ id: Number(a), qty: 1 }] });
+  const o = (await one(admin('select admin_get_order($1) r', [Number(r.number.replace('ALO-', '')) - 10000]))).r;
+  assert.equal(o.items[0].code, 'ZZ-1');
+  await admin('update products set code=null where id=$1', [a]);
+});
+
 test('clearing sample data leaves real clients and products', async () => {
   await db.exec(sql('clear-sample-data.sql'));
   assert.equal((await db.query("select * from customers where email like '%@example.com'")).rows.length, 0);
@@ -422,6 +436,9 @@ test('the Alola product list loads and passes every product rule', async () => {
   assert.equal(rows.filter(r => r.featured).length, 8);
   assert.ok(rows.every(r => r.price >= 90 && r.price <= 1200));
   await db.exec(sql('products-alola-arabic.sql'));
+  await db.exec(sql('products-alola-codes.sql'));
+  const coded = (await db.query("select name, code from products where stock = 20 and rating is null and created_at > now() - interval '1 minute'")).rows;
+  assert.equal(new Set(coded.filter(r => rows.some(x => x.name === r.name)).map(r => r.code)).size, rows.length, 'every product has its own code');
   const named = (await db.query("select name, name_ar from products where stock = 20 and rating is null and created_at > now() - interval '1 minute'")).rows;
   assert.deepEqual(named.filter(r => !r.name_ar).map(r => r.name).filter(n => rows.some(x => x.name === n)), [], 'every product has an Arabic name');
 });

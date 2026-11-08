@@ -39,7 +39,7 @@ The public key in `public/js/config.js` is safe to publish. Access rules in `sup
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the **SQL Editor**, run `supabase/schema.sql`.
-3. Run `supabase/products-alola.sql`, then `supabase/products-alola-arabic.sql`, to add Alola's 50 products. To try the dashboard with made-up data on a test project instead, run `supabase/seed.sql`.
+3. Run `supabase/products-alola.sql`, then `supabase/products-alola-arabic.sql` and `supabase/products-alola-codes.sql`, to add Alola's 50 products with Arabic names and product codes. To try the dashboard with made-up data on a test project instead, run `supabase/seed.sql`.
 4. Under **Authentication > Users**, add a user with your email and password.
 5. Make that user an admin. In the SQL Editor, run this with your email:
    ```sql

@@ -50,6 +50,7 @@ window.AdminDB = (function () {
   async function saveProduct(id, body, previousImage) {
     const row = cleanProduct(body);
     const { error } = id ? await sb.from('products').update(row).eq('id', id) : await sb.from('products').insert(row);
+    if (error?.code === '23505') throw new Error('That product code is already used by another product');
     check(error);
     if (previousImage && previousImage !== row.image) await removeImage(previousImage);
   }
