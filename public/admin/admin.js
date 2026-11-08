@@ -94,8 +94,16 @@
     document.addEventListener('click', e => { if (notif.pop && !e.target.closest('#pop')) togglePop(false); });
   }
 
-  let current = null, viewToken = 0;
+  let current = null, viewToken = 0, lastHash = '';
   function route() {
+    // Moving to another page would close a form with unsaved edits: ask first, and stay put if the admin says no.
+    if (unsaved()) {
+      const target = location.hash;
+      history.replaceState(null, '', lastHash || '#/overview');
+      confirmDiscard().then(ok => { if (ok) { drawer.dirty = false; location.hash = target; } });
+      return;
+    }
+    lastHash = location.hash;
     const [, name, id] = location.hash.match(/^#\/(\w+)(?:\/(\d+))?/) || [];
     const key = VIEWS[name] ? name : 'overview';
     $$('[data-nav]').forEach(a => { const on = a.dataset.nav === key; a.classList.toggle('it', true); a.classList.toggle('cur', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
@@ -193,23 +201,52 @@
   }
 
   // ------------------------------------------------------------ drawer + confirm
-  function openDrawer(html) {
+  // A guarded drawer (a form) asks before throwing away edits the admin hasn't saved.
+  const drawer = { guard: false, dirty: false };
+  function openDrawer(html, { guard = false } = {}) {
     const root = $('#drawerRoot');
-    root.innerHTML = `<div class="ov" id="ov"></div><aside class="dr" role="dialog" aria-modal="true">${html}</aside>`;
-    $('#ov').onclick = closeDrawer;
-    $$('[data-close]', root).forEach(b => b.onclick = closeDrawer);
+    root.innerHTML = `<div class="ov" id="ov"></div><aside class="dr" role="dialog" aria-modal="true" aria-labelledby="drTitle">${html}</aside>`;
+    const title = $('.dr h2', root); if (title) title.id = 'drTitle';
+    Object.assign(drawer, { guard, dirty: false });
+    const markDirty = e => { if (drawer.guard && e.target.type !== 'file') drawer.dirty = true; };
+    root.addEventListener('input', markDirty); root.addEventListener('change', markDirty);
+    $('#ov').onclick = requestClose;
+    $$('[data-close]', root).forEach(b => b.onclick = requestClose);
     $('.x', root)?.focus();
     return $('.dr', root);
   }
-  function closeDrawer() { const r = $('#drawerRoot'); if (r) r.innerHTML = ''; }
-  addEventListener('keydown', e => { if (e.key === 'Escape') { if (notif.pop) togglePop(false); else if (!$('dialog[open]')) closeDrawer(); } });
-  function confirmDialog(title, text, okLabel) {
+  const unsaved = () => drawer.guard && drawer.dirty && !!$('#drawerRoot .dr');
+  const confirmDiscard = () => confirmDialog('Discard your changes?', 'You have edits in this form that haven’t been saved.', 'Discard changes', 'Keep editing');
+  async function requestClose() {
+    if (unsaved() && !(await confirmDiscard())) return;
+    closeDrawer();
+  }
+  function closeDrawer() { const r = $('#drawerRoot'); if (r) r.innerHTML = ''; drawer.dirty = false; }
+  addEventListener('beforeunload', e => { if (unsaved()) e.preventDefault(); });
+  addEventListener('keydown', e => {
+    if ($('dialog[open]')) return;
+    if (e.key === 'Escape') { if (notif.pop) togglePop(false); else requestClose(); }
+    const dr = $('#drawerRoot .dr');
+    if (e.key === 'Tab' && dr) trapFocus(e, dr);
+  });
+  /** Keeps Tab and Shift+Tab inside an open drawer. */
+  function trapFocus(e, box) {
+    const items = $$('a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])', box).filter(el => el.offsetParent !== null || el.closest('label'));
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (!box.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+    else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+  function confirmDialog(title, text, okLabel, cancelLabel = 'Keep it') {
     return new Promise(res => {
       const d = document.createElement('dialog');
-      d.innerHTML = `<h3>${esc(title)}</h3><p>${esc(text)}</p><div class="row"><button class="btn ln" value="n">Keep it</button><button class="btn dg" value="y">${esc(okLabel)}</button></div>`;
+      d.innerHTML = `<h3>${esc(title)}</h3><p>${esc(text)}</p><div class="row"><button class="btn ln" value="n">${esc(cancelLabel)}</button><button class="btn dg" value="y">${esc(okLabel)}</button></div>`;
       document.body.append(d);
-      d.addEventListener('close', () => { d.remove(); res(d.returnValue === 'y'); });
-      $$('button', d).forEach(b => b.onclick = () => d.close(b.value));
+      let done = false;
+      const finish = yes => { if (done) return; done = true; if (d.open) d.close(); d.remove(); res(yes); };
+      d.addEventListener('close', () => finish(false)); // Esc
+      $$('button', d).forEach(b => b.onclick = () => finish(b.value === 'y'));
       d.showModal();
     });
   }
@@ -464,7 +501,7 @@
           ${noCode.length ? `<p class="note"><b>No product code (${noCode.length}):</b> ${noCode.map(p => esc(p.name)).join(', ')}. Add a code to update them from the sheet.</p>` : ''}
         </div>
         <div class="dr-foot"><button type="button" class="btn ln" data-close>Cancel</button><button class="btn" id="i_go" ${changes.length ? '' : 'disabled'}>Update ${changes.length} product${changes.length === 1 ? '' : 's'}</button></div>`;
-      $$('[data-close]', out).forEach(b => b.onclick = closeDrawer);
+      $$('[data-close]', out).forEach(b => b.onclick = requestClose);
       $('#i_price', dr).onchange = $('#i_stock', dr).onchange = draw;
       $('#i_go', dr).onclick = async e => {
         e.target.disabled = true;
@@ -512,8 +549,8 @@
         <div class="fld"><label for="f_desc_ar">Description in Arabic</label><textarea class="in" id="f_desc_ar" dir="rtl" maxlength="4000">${esc(v.description_ar)}</textarea></div>
         <div class="fld"><label for="f_how_ar">How to use in Arabic</label><textarea class="in" id="f_how_ar" dir="rtl" maxlength="2000">${esc(v.how_to_ar)}</textarea></div>
       </div>
-      <div class="dr-foot"><button type="button" class="btn ln" data-close>Cancel</button><button class="btn" id="pSave">${isNew ? 'Add product' : 'Save changes'}</button></div></form>`);
-    $$('[data-close]', dr).forEach(b => b.onclick = closeDrawer);
+      <div class="dr-foot"><button type="button" class="btn ln" data-close>Cancel</button><button class="btn" id="pSave">${isNew ? 'Add product' : 'Save changes'}</button></div></form>`, { guard: true });
+    $$('[data-close]', dr).forEach(b => b.onclick = requestClose);
 
     let image = v.image;
     const val = id => $(`#${id}`, dr).value;
@@ -637,8 +674,8 @@
         <div class="fld"><label for="d_exp">Last day it works</label><input class="in" id="d_exp" type="date" value="${esc(v.expires_on || '')}"></div>
         <label class="tg"><input type="checkbox" id="d_active" ${v.active ? 'checked' : ''}> Code is on</label>
       </div>
-      <div class="dr-foot"><button type="button" class="btn ln" data-close>Cancel</button><button class="btn" id="dSave">${isNew ? 'Add code' : 'Save changes'}</button></div></form>`);
-    $$('[data-close]', dr).forEach(b => b.onclick = closeDrawer);
+      <div class="dr-foot"><button type="button" class="btn ln" data-close>Cancel</button><button class="btn" id="dSave">${isNew ? 'Add code' : 'Save changes'}</button></div></form>`, { guard: true });
+    $$('[data-close]', dr).forEach(b => b.onclick = requestClose);
     const syncType = () => {
       const t = $('#d_type', dr).value;
       $('#d_valueWrap', dr).hidden = t === 'free_delivery';

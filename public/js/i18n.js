@@ -89,7 +89,7 @@ window.T = (function () {
     'This product is sold out': 'هذا المنتج نفد',
 
     // cart
-    'Your cart': 'سلتك', 'Your cart is empty': 'سلتك فارغة', 'Find something you’ll love.': 'اعثري على ما تحبينه.', 'Browse products': 'تصفحي المنتجات',
+    'Your cart': 'سلتك', 'Skip to content': 'انتقل إلى المحتوى', 'Your cart is empty': 'سلتك فارغة', 'Find something you’ll love.': 'اعثري على ما تحبينه.', 'Browse products': 'تصفحي المنتجات',
     'You’ve unlocked free delivery': 'حصلتِ على توصيل مجاني', 'Subtotal': 'المجموع', 'Delivery': 'التوصيل', 'Free': 'مجاني', 'Total': 'الإجمالي', 'Checkout': 'إتمام الطلب',
     'Add something before checking out.': 'أضيفي منتجًا قبل إتمام الطلب.',
 

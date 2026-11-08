@@ -14,6 +14,9 @@ button,select,input,textarea{font:inherit;color:inherit}
 button{cursor:pointer;border:0;background:none}
 img,svg{display:block}
 :focus-visible{outline:2.5px solid var(--olive);outline-offset:2px;border-radius:6px}
+.skip{position:fixed;top:10px;inset-inline-start:10px;z-index:200;background:var(--ink);color:#f6f2e9;padding:12px 20px;border-radius:99px;font-weight:700;transform:translateY(-300%)}
+.skip:focus{transform:none}
+main:focus{outline:none}
 [hidden]{display:none!important}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .serif{font-family:var(--serif);font-style:italic;font-weight:400;letter-spacing:-.01em}
@@ -33,7 +36,7 @@ header.nav.sc .logo img{height:36px}
 .links a:hover,.links a.cur{color:var(--olive2)}
 .ind{position:absolute;top:0;left:0;height:100%;width:0;border-radius:99px;background:#eef2e4;opacity:0;transition:left .35s var(--ease),width .35s var(--ease),opacity .3s}
 .nav-r{display:flex;gap:8px;align-items:center}
-.icon-btn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#f5f1e6;transition:.25s;flex:none}
+.icon-btn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#f5f1e6;transition:background-color .25s,color .25s,transform .25s;flex:none}
 .icon-btn:hover{background:var(--sage);transform:translateY(-2px)}
 .icon-btn svg{width:19px;height:19px}
 .cart{background:var(--ink);color:#fff;border-radius:99px;padding:11px 20px;font-weight:700;transition:.3s;display:flex;gap:10px;align-items:center;min-height:44px}

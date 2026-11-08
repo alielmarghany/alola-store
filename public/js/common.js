@@ -130,10 +130,20 @@ window.A = (function () {
     document.dispatchEvent(new CustomEvent('alola:cart'));
   }
   let lastFocus;
+  /** Keeps Tab and Shift+Tab inside an open dialog. */
+  function trapFocus(e, box) {
+    const items = $$('a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])', box).filter(el => el.offsetParent !== null);
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (!box.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+    else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
   function openCart(on) {
     const dr = $('#cartDrawer');
     dr.classList.toggle('on', on); $('#overlay').classList.toggle('on', on);
-    if (on) { lastFocus = document.activeElement; $('#cartClose').focus(); } else if (dr.contains(document.activeElement)) lastFocus?.focus();
+    // Wait a frame: the drawer's buttons only become visible, and so focusable, once it starts opening.
+    if (on) { lastFocus = document.activeElement; requestAnimationFrame(() => requestAnimationFrame(() => $('#cartClose').focus())); } else if (dr.contains(document.activeElement)) lastFocus?.focus();
   }
   function flyToCart(fromEl) {
     if (reduced || !fromEl) return;
@@ -160,7 +170,9 @@ window.A = (function () {
   function mountChrome(active) {
     const home = active === 'home' ? '' : './';
     const head = document.createElement('div');
-    head.innerHTML = `<div class="promo">Free delivery on orders over <b>1,000 EGP</b> · Cash on delivery across Egypt</div>
+    const main = $('main');
+    if (main) { main.id ||= 'main'; main.tabIndex = -1; }
+    head.innerHTML = `<a class="skip" href="#${main ? main.id : 'main'}">Skip to content</a><div class="promo">Free delivery on orders over <b>1,000 EGP</b> · Cash on delivery across Egypt</div>
     <header class="nav" id="navbar"><div id="bar"></div>
       <a class="logo" href="./" aria-label="Alola home"><img src="assets/logo.png" alt="Alola" width="128" height="46"></a>
       <nav class="links" id="links" aria-label="Main"><span class="ind" id="ind"></span>
@@ -182,7 +194,7 @@ window.A = (function () {
         <div><h4>Staff</h4><a href="admin/">Admin dashboard</a></div>
       </div><div class="ft-b"><span>© ${new Date().getFullYear()} Alola Cosmetics</span><span>Prices include VAT · Cash on delivery</span><button class="lang-link" id="langFoot" lang="${T.ar ? 'en' : 'ar'}">${T.ar ? 'English' : 'العربية'}</button></div></footer>
       <div class="ov" id="overlay"></div>
-      <aside class="dr" id="cartDrawer" aria-label="Shopping cart"><div class="dh"><h3>Your cart</h3><button class="icon-btn" id="cartClose" aria-label="Close cart">${ICON.close}</button></div>
+      <aside class="dr" id="cartDrawer" role="dialog" aria-modal="true" aria-labelledby="cartTitle"><div class="dh"><h3 id="cartTitle">Your cart</h3><button class="icon-btn" id="cartClose" aria-label="Close cart">${ICON.close}</button></div>
         <div class="ship" id="shipBar" hidden><span id="shipMsg"></span><i><u id="shipFill" style="width:0"></u></i></div>
         <div id="cartItems"></div>
         <div id="cartFoot" hidden><div style="height:10px"></div><div class="tot"><span>Subtotal</span><span id="cartSub"></span></div><div class="tot"><span>Delivery</span><span id="cartShip"></span></div><div class="tot g"><span>Total</span><span id="cartTotal"></span></div><a class="btn ro" style="width:100%" href="checkout.html">Checkout ${ICON.arrow}</a></div>
@@ -211,7 +223,10 @@ window.A = (function () {
     // cart + delegated product actions
     $('#cartBtn').onclick = () => openCart(true);
     $('#cartClose').onclick = $('#overlay').onclick = () => openCart(false);
-    addEventListener('keydown', e => { if (e.key === 'Escape') { openCart(false); document.dispatchEvent(new CustomEvent('alola:esc')); } });
+    addEventListener('keydown', e => {
+      if (e.key === 'Escape') { openCart(false); document.dispatchEvent(new CustomEvent('alola:esc')); }
+      if (e.key === 'Tab' && $('#cartDrawer').classList.contains('on')) trapFocus(e, $('#cartDrawer'));
+    });
     document.addEventListener('click', async e => {
       const add = e.target.closest('[data-add]');
       if (add) {
