@@ -24,7 +24,7 @@
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
   const debounce = (fn, ms = 250) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
-  const SVG = (d, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.900" stroke-linecap="round" stroke-linejoin="round" ${extra}>${d}</svg>`;
+  const SVG = (d, extra = '') => `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.900" stroke-linecap="round" stroke-linejoin="round" ${extra}>${d}</svg>`;
   const I = {
     overview: SVG('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
     orders: SVG('<path d="M6 7h12l1.500 13h-15zM9 7V5a3 3 0 0 1 6 0v2"/>'),
@@ -59,13 +59,13 @@
   function renderLogin() {
     document.title = 'Log in | Alola Dashboard';
     app.innerHTML = `<div class="login"><form id="lf">
-      <img src="../assets/logo.png" alt="Alola" height="50"><h1>Store <em>dashboard</em></h1>
+      <img src="../assets/logo.png" alt="Alola" width="139" height="50"><h1>Store <em>dashboard</em></h1>
       <div class="form-err" id="le" role="alert" hidden></div>
       <div class="fld"><label for="u">Email</label><input class="in" id="u" type="email" autocomplete="username" required></div>
       <div class="fld"><label for="p">Password</label><input class="in" id="p" type="password" autocomplete="current-password" required></div>
       <button class="btn" style="width:100%;margin-top:6px">Log in</button>
       <p style="text-align:center;margin-top:14px"><a href="../" class="linkbtn">Back to store</a></p></form></div>`;
-    $('#u').focus();
+    if (matchMedia('(pointer: fine)').matches) $('#u').focus(); // on phones this would pop the keyboard up straight away
     $('#lf').onsubmit = async e => {
       e.preventDefault();
       const b = $('button', e.target); b.disabled = true;
@@ -80,7 +80,7 @@
 
   function renderShell() {
     app.innerHTML = `<div class="shell">
-      <aside class="nav"><a class="brand" href="#/overview"><img src="../assets/logo.png" alt="Alola" height="42"></a>
+      <aside class="nav"><a class="brand" href="#/overview"><img src="../assets/logo.png" alt="Alola" width="117" height="42"></a>
         ${NAV.map(([k, l]) => `<a class="it" href="#/${k}" data-nav="${k}">${I[k]}<span>${l}</span>${k === 'orders' ? '<span class="cnt" id="pendingCnt" hidden></span>' : ''}</a>`).join('')}
         <div class="sp"></div>
         <a class="it side-only" href="../" target="_blank" rel="noopener">${I.store}<span>View store</span></a>
@@ -423,7 +423,7 @@
     catch (e) { return fail(e); }
     drawProducts();
   }
-  const thumb = p => `<div class="th ph-${esc(p.category)}">${p.image ? `<img src="${esc(p.image)}" alt="">` : alolaArt(p)}</div>`;
+  const thumb = p => `<div class="th ph-${esc(p.category)}">${p.image ? `<img src="${esc(p.image)}" alt="" width="48" height="48" loading="lazy" decoding="async">` : alolaArt(p)}</div>`;
   function drawProducts() {
     const q = productsState.q.trim().toLowerCase();
     const rows = productsState.rows.filter(p => !q || `${p.name} ${p.brand} ${p.category} ${p.code || ''}`.toLowerCase().includes(q));

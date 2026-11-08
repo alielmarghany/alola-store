@@ -101,7 +101,7 @@ html[data-theme] .btn.gh,html[data-theme] .btn.ln{background:transparent;color:v
 html[data-theme] .btn.gh{color:#fff;border-color:#fff}
 html[data-theme] .in,html[data-theme] select.in,html[data-theme] textarea.in{background:var(--dark);color:var(--ink);border:2px solid var(--olive);border-radius:0;font-family:var(--body)}
 html[data-theme] .in::placeholder{color:var(--mute);opacity:.8}
-html[data-theme] .in:focus{border-color:var(--rose);box-shadow:0 0 14px rgba(255,255,255,.2)}
+html[data-theme] .in:focus-visible{border-color:var(--rose);box-shadow:0 0 14px rgba(255,255,255,.2)}
 html[data-theme] .in[readonly]{opacity:.75}
 html[data-theme] select option{background:var(--dark);color:var(--ink)}
 html[data-theme] .arrows button{background:var(--dark);color:var(--rose);border:2px solid var(--rose);border-radius:0}

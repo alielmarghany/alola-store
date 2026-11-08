@@ -70,7 +70,7 @@
     const box = $('#codeBox'); if (!box) return;
     box.innerHTML = appliedCode
       ? `<div class="code-on"><span><b>${esc(appliedCode)}</b> <span>Code applied</span></span><button type="button" class="linkish" id="codeRemove">Remove</button></div>`
-      : `<label class="code-l" for="codeInput">Discount code</label><div class="code-row"><input class="in" id="codeInput" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30" placeholder="Enter code"><button type="button" class="btn ln" id="codeApply">Apply</button></div>${message ? `<div class="err" role="alert">${esc(message)}</div>` : ''}`;
+      : `<label class="code-l" for="codeInput">Discount code</label><div class="code-row"><input class="in" id="codeInput" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30" placeholder="e.g. EID20"><button type="button" class="btn ln" id="codeApply">Apply</button></div>${message ? `<div class="err" role="alert">${esc(message)}</div>` : ''}`;
     if (appliedCode) { $('#codeRemove').onclick = () => { appliedCode = null; renderCode(); renderSummary(); }; return; }
     const input = $('#codeInput'), btn = $('#codeApply');
     // Enter here applies the code; it must not place the order.
@@ -126,7 +126,7 @@
   function success(o) {
     const first = esc(o.name.split(' ')[0]);
     root.innerHTML = `<div class="done">
-      <div class="wr">${alolaWreath({ leaves: 26, a: '#7d8f5e', b: '#a3b585', stem: '#a3b585' })}<div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div></div>
+      <div class="wr">${alolaWreath({ leaves: 26, a: '#7d8f5e', b: '#a3b585', stem: '#a3b585' })}<div class="tick"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div></div>
       <h1>Thank you, <em>${first}</em></h1>
       <p>Your order is in. We’ll call you to confirm, then it’s on its way to ${esc(o.city)}. Pay ${fmt(o.total)} in cash on delivery.</p>
       ${o.discount_code ? `<p>Discount code ${esc(o.discount_code)} applied.</p>` : ''}

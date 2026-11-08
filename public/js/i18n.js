@@ -40,7 +40,7 @@ window.T = (function () {
 
     // header + footer
     'All products': 'كل المنتجات', 'Featured': 'المميزة', 'Brands': 'الماركات', 'Why Alola': 'لماذا العلا', 'Reviews': 'الآراء', 'Cart': 'السلة',
-    'Free delivery on orders over': 'توصيل مجاني للطلبات فوق', '1,000 EGP': '1,000 ج.م', '· Cash on delivery across Egypt': '· الدفع عند الاستلام في كل مصر',
+    'Free delivery on orders over': 'توصيل مجاني للطلبات فوق', '1,000 EGP': '1,000 ج.م', '· Cash on delivery across Egypt': '· الدفع عند الاستلام في كل مصر',
     'Skincare, makeup, hair and fragrance from brands you trust, delivered across Egypt.': 'العناية بالبشرة والمكياج والشعر والعطور من ماركات تثقين بها، مع التوصيل لكل مصر.',
     'Shop': 'تسوقي', 'Store': 'المتجر', 'Staff': 'فريق العمل', 'Admin dashboard': 'لوحة التحكم', 'My account': 'حسابي',
     'Prices include VAT · Cash on delivery': 'الأسعار شاملة الضريبة · الدفع عند الاستلام',
@@ -95,7 +95,7 @@ window.T = (function () {
 
     // shop page
     'All <em>products</em>': 'كل <em>المنتجات</em>', 'Everything we stock, all in one place.': 'كل ما لدينا في مكان واحد.',
-    'Search': 'بحث', 'Products or brands': 'منتجات أو ماركات', 'Category': 'القسم', 'Brand': 'الماركة', 'Price': 'السعر', 'Rating': 'التقييم', 'Availability': 'التوفر',
+    'Search': 'بحث', 'Products or brands': 'منتجات أو ماركات', 'e.g. Anua serum…': 'مثلاً: سيروم أنوا…', 'e.g. EID20': 'مثلاً EID20', 'Pause': 'إيقاف', 'Play': 'تشغيل', 'Pause the brand ticker': 'إيقاف شريط الماركات', 'Play the brand ticker': 'تشغيل شريط الماركات', 'Category': 'القسم', 'Brand': 'الماركة', 'Price': 'السعر', 'Rating': 'التقييم', 'Availability': 'التوفر',
     'In stock only': 'المتوفر فقط', 'On sale': 'عليه تخفيض', 'My saved items': 'المحفوظات', 'In stock': 'متوفر', 'Saved': 'المحفوظات', 'Any': 'الكل',
     'Sort by': 'ترتيب حسب', 'Sort: Featured': 'ترتيب: المميزة', 'Newest first': 'الأحدث أولًا', 'Price: low to high': 'السعر: من الأقل', 'Price: high to low': 'السعر: من الأعلى', 'Top rated': 'الأعلى تقييمًا', 'Name: A to Z': 'الاسم: أ إلى ي',
     'Minimum price': 'أقل سعر', 'Maximum price': 'أعلى سعر',

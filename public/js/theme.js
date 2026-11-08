@@ -25,6 +25,10 @@
     } else {
       delete root.dataset.theme;
     }
+    // The phone's browser bar matches the theme's background.
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
+    if (meta && bg) meta.content = bg;
   }
 
   const preview = new URLSearchParams(location.search).get('theme');

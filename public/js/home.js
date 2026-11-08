@@ -71,8 +71,15 @@
   $('#next').onclick = () => rail.scrollBy({ left: 600 * dir, behavior: 'smooth' });
 
   // Marquee: only brands we actually stock, so every name leads to products.
-  const row = brands.map(b => `<a class="bp" href="shop.html?brand=${encodeURIComponent(b)}">${esc(b)}</a>`).join('');
-  $('#marquee').innerHTML = row.repeat(brands.length < 6 ? 6 : 4);
+  // The names repeat to fill the loop: only the first set is read out and reachable with Tab.
+  const row = copy => brands.map(b => `<a class="bp" translate="no" href="shop.html?brand=${encodeURIComponent(b)}"${copy ? ' tabindex="-1" aria-hidden="true"' : ''}>${esc(b)}</a>`).join('');
+  $('#marquee').innerHTML = Array.from({ length: brands.length < 6 ? 6 : 4 }, (_, i) => row(i > 0)).join('');
+  const mq = $('#marquee').parentElement, pause = $('#mqPause');
+  pause.onclick = () => {
+    const paused = mq.classList.toggle('paused');
+    pause.setAttribute('aria-pressed', paused);
+    pause.textContent = paused ? 'Play' : 'Pause';
+  };
 
   // Ritual: pinned art swaps as the steps scroll past. Hidden if the matching products were removed.
   const RITUAL = [

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f6f2e9">
 <title>Alola | Cosmetics Store</title>
 <meta name="description" content="Skincare, makeup, hair and fragrance from the brands you trust, delivered across Egypt.">
 <link rel="icon" type="image/png" href="assets/favicon.png">
@@ -26,7 +27,7 @@
       <div class="stage" id="stage"><div class="par" data-depth="10" id="stageWreath"></div><div class="par" data-depth="26"><div class="hero-pack" id="heroPack"></div></div></div>
       <h1><span class="ln-m"><span>Glow</span></span><span class="ln-m"><span><em>loud.</em></span></span></h1>
       <p>Skincare, makeup, hair and fragrance from the brands you trust. Real stock, real prices.</p>
-      <div class="acts"><a class="btn" href="shop.html">Shop now <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg></a><a class="btn gh" href="#ritual">The ritual</a></div>
+      <div class="acts"><a class="btn" href="shop.html">Shop now <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg></a><a class="btn gh" href="#ritual">The ritual</a></div>
     </div>
     <div class="tile t2"><div class="big">24h</div><small>Cairo delivery, 3 days nationwide</small><div class="tile-art" id="artT2"></div></div>
     <div class="tile t3"><div class="big">COD</div><small>Pay in cash when it arrives</small><div class="tile-art" id="artT3"></div></div>
@@ -37,7 +38,7 @@
   <section id="featured">
     <div class="sh rev">
       <div><div class="kick" data-sprig>Handpicked</div><h2>Featured <em>favourites</em></h2><p>Tap a category to browse.</p></div>
-      <div class="arrows"><button id="prev" aria-label="Previous products"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H4M10 6l-6 6 6 6"/></svg></button><button id="next" aria-label="Next products"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg></button></div>
+      <div class="arrows"><button id="prev" aria-label="Previous products"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H4M10 6l-6 6 6 6"/></svg></button><button id="next" aria-label="Next products"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg></button></div>
     </div>
     <div class="cats rev" id="cats"></div>
     <div class="rail" id="rail" tabindex="0" aria-label="Featured products"></div>
@@ -53,7 +54,7 @@
 </div>
 
 <section id="brands" style="padding-bottom:24px">
-  <div class="wrap"><div class="sh rev"><div><div class="kick" data-sprig>Official brands</div><h2>Trusted by <em>top brands</em></h2><p>100% authentic, sourced from brand distributors. Tap a name to shop it.</p></div></div></div>
+  <div class="wrap"><div class="sh rev"><div><div class="kick" data-sprig>Official brands</div><h2>Trusted by <em>top brands</em></h2><p>100% authentic, sourced from brand distributors. Tap a name to shop it.</p></div><button class="chip mq-pause" id="mqPause" aria-pressed="false">Pause</button></div></div>
   <div class="mq"><div class="tr" id="marquee"></div></div>
 </section>
 
@@ -79,7 +80,7 @@
 
   <div class="nl rev">
     <div><h2>Join the <em>glow list</em></h2><p style="color:var(--mute);margin-top:8px">Early access to new arrivals and offers.</p></div>
-    <form id="newsletter"><label class="sr" for="nlEmail">Email address</label><input class="in" id="nlEmail" type="email" placeholder="Your email" required autocomplete="email"><button class="btn ro">Subscribe</button></form>
+    <form id="newsletter"><label class="sr" for="nlEmail">Email address</label><input class="in" id="nlEmail" type="email" placeholder="you@example.com" required autocomplete="email"><button class="btn ro">Subscribe</button></form>
   </div>
 </div>
 </main>

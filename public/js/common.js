@@ -3,24 +3,24 @@ window.A = (function () {
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmt = n => Number(n).toLocaleString('en-US') + (T.ar ? ' ج.م' : ' EGP');
+  const fmt = n => Number(n).toLocaleString('en-US') + (T.ar ? ' ج.م' : ' EGP'); // the amount and currency never split across lines
   /** A product's text in the visitor's language, falling back to English. */
   const loc = (p, field) => (T.ar && p[`${field}_ar`]) || p[field] || '';
   const pname = p => loc(p, 'name');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const ICON = {
-    user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.500-6 8-6s8 2 8 6"/></svg>',
-    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
-    menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
-    close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
-    arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg>',
-    back: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H4M10 6l-6 6 6 6"/></svg>',
-    heart: '<svg viewBox="0 0 24 24"><path d="M12 20s-7.500-4.600-9-9.200C2 7.300 4.200 4.500 7.300 4.500c2 0 3.700 1 4.700 2.800 1-1.800 2.700-2.800 4.700-2.800 3.100 0 5.300 2.800 4.300 6.300C19.500 15.400 12 20 12 20z"/></svg>',
-    truck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h12v10H2zM14 10h4l4 4v2h-8z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
-    cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.500"/><path d="M6 10v.01M18 14v.01"/></svg>',
-    leaf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19C5 10 11 4 20 4c0 9-6 15-15 15zM5 19 14 10"/></svg>',
-    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>',
+    user: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.500-6 8-6s8 2 8 6"/></svg>',
+    search: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
+    menu: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+    close: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+    arrow: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg>',
+    back: '<svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H4M10 6l-6 6 6 6"/></svg>',
+    heart: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 20s-7.500-4.600-9-9.200C2 7.300 4.200 4.500 7.300 4.500c2 0 3.700 1 4.700 2.800 1-1.800 2.700-2.800 4.700-2.800 3.100 0 5.300 2.800 4.300 6.300C19.500 15.400 12 20 12 20z"/></svg>',
+    truck: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h12v10H2zM14 10h4l4 4v2h-8z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
+    cash: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.500"/><path d="M6 10v.01M18 14v.01"/></svg>',
+    leaf: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19C5 10 11 4 20 4c0 9-6 15-15 15zM5 19 14 10"/></svg>',
+    check: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>',
   };
 
   // ------------------------------------------------ API
@@ -49,7 +49,7 @@ window.A = (function () {
 
   // ------------------------------------------------ product rendering
   const media = p => p.image
-    ? `<div class="media photo"><img src="${esc(p.image)}" alt="${esc(p.brand + ' ' + pname(p))}" loading="lazy"></div>`
+    ? `<div class="media photo"><img src="${esc(p.image)}" alt="${esc(p.brand + ' ' + pname(p))}" width="1080" height="1080" loading="lazy" decoding="async"></div>`
     : `<div class="media">${alolaArt(p)}</div>`;
   const starStr = r => { const n = Math.round(r); return '★'.repeat(n) + '☆'.repeat(5 - n); };
   const rating = p => p.rating_count
@@ -66,7 +66,7 @@ window.A = (function () {
     <div class="ph ph-${esc(p.category)}">${tagHtml(p)}
       <button class="heart${saved().includes(p.id) ? ' on' : ''}" data-heart="${p.id}" aria-label="Save ${esc(pname(p))}" aria-pressed="${saved().includes(p.id)}">${ICON.heart}</button>
       ${media(p)}</div>
-    <div class="info"><div class="br">${esc(p.brand)}</div><h3 class="nm"><a href="${url(p)}">${esc(pname(p))}</a></h3>${rating(p)}
+    <div class="info"><div class="br" translate="no">${esc(p.brand)}</div><h3 class="nm"><a href="${url(p)}">${esc(pname(p))}</a></h3>${rating(p)}
       <div class="row"><div class="pr">${price(p)}</div><button class="add" data-add="${p.id}" ${p.stock <= 0 ? 'disabled' : ''}>${p.stock <= 0 ? 'Sold out' : 'Add +'}</button></div></div>
   </article>`;
 
@@ -172,7 +172,7 @@ window.A = (function () {
     const head = document.createElement('div');
     const main = $('main');
     if (main) { main.id ||= 'main'; main.tabIndex = -1; }
-    head.innerHTML = `<a class="skip" href="#${main ? main.id : 'main'}">Skip to content</a><div class="promo">Free delivery on orders over <b>1,000 EGP</b> · Cash on delivery across Egypt</div>
+    head.innerHTML = `<a class="skip" href="#${main ? main.id : 'main'}">Skip to content</a><div class="promo">Free delivery on orders over <b>1,000&nbsp;EGP</b> · Cash on delivery across Egypt</div>
     <header class="nav" id="navbar"><div id="bar"></div>
       <a class="logo" href="./" aria-label="Alola home"><img src="assets/logo.png" alt="Alola" width="128" height="46"></a>
       <nav class="links" id="links" aria-label="Main"><span class="ind" id="ind"></span>
