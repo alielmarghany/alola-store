@@ -42,6 +42,7 @@ window.A = (function () {
   const products = () => (productsP ||= rest('products?select=*&active=eq.true&order=featured.desc,id'));
   const config = () => (configP ||= rest('store_settings?select=*').then(r => ({ shippingFee: r[0].shipping_fee, freeShippingOver: r[0].free_shipping_over, hero: r[0].hero || null })));
   const subscribe = email => rpc('subscribe', { p_email: email });
+  const brandLogos = () => rest('brand_logos?select=brand,logo').catch(() => []); // without logos, brand names are shown instead
 
   // ------------------------------------------------ storage (the browser may refuse it: never let that break the page)
   const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
@@ -285,5 +286,5 @@ window.A = (function () {
     requestAnimationFrame(f);
   }
 
-  return { $, $$, esc, fmt, loc, pname, products, config, subscribe, GOVERNORATES, media, card, rating, price, url, tagHtml, saved, getCart, setCart, addToCart, cartLines, totals, openCart, flyToCart, toast, mountChrome, reveal, renderCart, ICON, reduced };
+  return { $, $$, esc, fmt, loc, pname, products, config, subscribe, brandLogos, GOVERNORATES, media, card, rating, price, url, tagHtml, saved, getCart, setCart, addToCart, cartLines, totals, openCart, flyToCart, toast, mountChrome, reveal, renderCart, ICON, reduced };
 })();

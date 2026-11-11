@@ -8,7 +8,7 @@ window.AlolaHero = (function () {
       text: 'Skincare, makeup, hair and fragrance from the brands you trust. Real stock, real prices.',
       text_ar: 'العناية بالبشرة والمكياج والشعر والعطور من الماركات التي تثقين بها. مخزون حقيقي وأسعار حقيقية.',
       btn1_label: 'Shop now', btn1_label_ar: 'تسوقي الآن', btn1_link: 'shop.html',
-      btn2_label: 'The ritual', btn2_label_ar: 'روتين العناية', btn2_link: '#ritual',
+      btn2_label: 'Our brands', btn2_label_ar: 'ماركاتنا', btn2_link: '#ritual',
       image: '', image_mode: 'art', bg: '',
     },
     t2: { title: '24h', title_ar: '24 ساعة', text: 'Cairo delivery, 3 days nationwide', text_ar: 'توصيل القاهرة، و3 أيام لباقي المحافظات', link: '', image: '', image_mode: 'art', bg: '' },

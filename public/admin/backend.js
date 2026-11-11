@@ -167,6 +167,19 @@ window.AdminDB = (function () {
       return data.hero;
     },
     setHero: hero => rpc('admin_set_hero', { p_hero: hero }),
+    brandLogos: async () => {
+      const { data, error } = await sb.from('brand_logos').select('brand, logo');
+      check(error);
+      return data;
+    },
+    setBrandLogo: async (brand, logo) => {
+      const { error } = await sb.from('brand_logos').upsert({ brand, logo, updated_at: new Date().toISOString() });
+      check(error);
+    },
+    removeBrandLogo: async brand => {
+      const { error } = await sb.from('brand_logos').delete().eq('brand', brand);
+      check(error);
+    },
     liveTheme: () => rpc('current_theme'),
     themeSchedules: async () => {
       const { data, error } = await sb.from('theme_schedule').select('*').order('starts_at', { ascending: false });

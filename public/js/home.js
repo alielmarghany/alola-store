@@ -1,6 +1,7 @@
 // Landing page.
 (async function () {
-  const { $, $$, esc, card, url } = A;
+  const { $, $$, esc, card } = A;
+  const logosP = A.brandLogos(); // fetched alongside the products
   A.mountChrome('home');
   $$('[data-sprig]').forEach(el => el.insertAdjacentHTML('afterbegin', alolaSprig()));
 
@@ -100,27 +101,27 @@
     pause.textContent = paused ? 'Play' : 'Pause';
   };
 
-  // Ritual: pinned art swaps as the steps scroll past. Hidden if the matching products were removed.
-  const RITUAL = [
-    { art: 'pump', title: 'Cleanse', text: 'Start fresh. A gentle cleanser lifts away the night without stripping skin.' },
-    { art: 'dropper', title: 'Treat', text: 'A targeted serum does the quiet work: balance, clarity and an even tone.' },
-    { art: 'tube', title: 'Protect', text: 'Finish with sunscreen, every single day. It’s the step your future skin thanks you for.' },
-  ].map(s => ({ ...s, p: products.find(p => p.category === 'Skincare' && p.art === s.art) }));
-  if (RITUAL.every(s => s.p)) {
+  // Brands by category: the categories are the steps on the left, each with its brands' logos on the right.
+  // Brands come from the products in stock, so the section follows the catalogue; logos are set in the dashboard.
+  const byCat = ['Skincare', 'Hair', 'Makeup', 'Fragrance']
+    .map(c => ({ c, brands: [...new Set(products.filter(p => p.category === c).map(p => p.brand))].sort((a, b) => a.localeCompare(b)) }))
+    .filter(x => x.brands.length);
+  if (byCat.length) {
+    const logos = Object.fromEntries((await logosP).map(l => [l.brand, l.logo]));
+    const logo = b => logos[b] && AlolaHero.safeImage(logos[b])
+      ? `<img src="${esc(logos[b])}" alt="${esc(b)}" loading="lazy" decoding="async">` : `<span class="logo-name">${esc(b)}</span>`;
     $('#ritualWrap').hidden = false;
-    // Like the hero, this section is decoration: it keeps the drawings even when products have photos.
-    const art = p => `<div class="media">${alolaArt(p)}</div>`;
-    $('#rStage').innerHTML = RITUAL.map((s, i) => art(s.p).replace('class="media', `data-i="${i}" class="media${i ? '' : ' on'}`)).join('');
-    $('#rSteps').innerHTML = RITUAL.map((s, i) => `<article class="step${i ? '' : ' on'}" data-i="${i}">
-      <div class="inline-art">${art(s.p)}</div><div class="no">0${i + 1}</div><h3>${s.title}</h3><p>${s.text}</p>
-      <a href="${url(s.p)}">${esc(A.pname(s.p))}</a></article>`).join('');
+    $('#rCats').innerHTML = byCat.map((x, i) => `<a href="#cat-${x.c}" class="r-cat${i ? '' : ' on'}" data-i="${i}"><b>0${i + 1}</b><span>${x.c}</span><small>${x.brands.length}</small></a>`).join('');
+    $('#rSteps').innerHTML = byCat.map((x, i) => `<article class="step${i ? '' : ' on'}" data-i="${i}" id="cat-${x.c}">
+      <div class="no">0${i + 1}</div><h3>${x.c}</h3>
+      <div class="logos">${x.brands.map(b => `<a class="logo-card" translate="no" href="shop.html?brand=${encodeURIComponent(b)}" title="${esc(b)}">${logo(b)}</a>`).join('')}</div></article>`).join('');
+    const pick = i => {
+      $$('.step').forEach(s => s.classList.toggle('on', s.dataset.i === i));
+      $$('.r-cat').forEach(a => { const on = a.dataset.i === i; a.classList.toggle('on', on); on ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current'); });
+    };
+    pick('0');
     if ('IntersectionObserver' in window) {
-      const stepObs = new IntersectionObserver(es => es.forEach(x => {
-        if (!x.isIntersecting) return;
-        const i = x.target.dataset.i;
-        $$('.step').forEach(s => s.classList.toggle('on', s.dataset.i === i));
-        $$('#rStage .media').forEach(m => m.classList.toggle('on', m.dataset.i === i));
-      }), { rootMargin: '-45% 0px -45% 0px' });
+      const stepObs = new IntersectionObserver(es => es.forEach(x => { if (x.isIntersecting) pick(x.target.dataset.i); }), { rootMargin: '-45% 0px -45% 0px' });
       $$('.step').forEach(s => stepObs.observe(s));
     }
   }

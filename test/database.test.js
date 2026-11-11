@@ -485,6 +485,17 @@ test('the home page hero is set by admins, cleaned, and readable by everyone', a
   assert.equal((await one(anon('select hero from store_settings'))).hero, null);
 });
 
+test('brand logos: everyone can see them, only admins can change them', async () => {
+  const logo = 'https://x.supabase.co/storage/v1/object/public/product-images/anua.png';
+  await assert.rejects(anon("insert into brand_logos values ('Anua', $1)", [logo]), /permission denied/);
+  await assert.rejects(stranger("insert into brand_logos values ('Anua', $1)", [logo]), /row-level security/);
+  await admin("insert into brand_logos (brand, logo) values ('Anua', $1)", [logo]);
+  assert.deepEqual(await anon('select brand, logo from brand_logos'), [{ brand: 'Anua', logo }]);
+  await assert.rejects(admin("insert into brand_logos (brand, logo) values ('Bad', 'javascript:alert(1)')"), /check constraint/);
+  assert.equal((await stranger("delete from brand_logos where brand = 'Anua' returning brand")).length, 0);
+  assert.equal((await admin("delete from brand_logos where brand = 'Anua' returning brand")).length, 1);
+});
+
 test('clearing sample data leaves real clients and products', async () => {
   await db.exec(sql('clear-sample-data.sql'));
   assert.equal((await db.query("select * from customers where email like '%@example.com'")).rows.length, 0);

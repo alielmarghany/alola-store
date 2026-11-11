@@ -58,6 +58,7 @@ window.T = (function () {
     'products in stock': 'منتج متوفر', 'official brands': 'ماركة رسمية', 'to your door in Cairo': 'لباب بيتك في القاهرة', 'authentic': 'أصلي',
     'Handpicked': 'مختارة بعناية', 'Featured <em>favourites</em>': 'منتجاتنا <em>المميزة</em>', 'Tap a category to browse.': 'اختاري قسمًا للتصفح.',
     'Previous products': 'المنتجات السابقة', 'Next products': 'المنتجات التالية', 'Featured products': 'المنتجات المميزة',
+    'Our brands': 'ماركاتنا', 'Shop by <em>brand</em>': 'تسوقي حسب <em>الماركة</em>', 'Every brand we stock, grouped by what you’re shopping for. Tap a logo to see its products.': 'كل الماركات المتوفرة لدينا مقسمة حسب ما تبحثين عنه. اضغطي على الشعار لرؤية منتجاتها.',
     'Your routine': 'روتينك', 'A ritual in <em>three steps</em>': 'روتين من <em>ثلاث خطوات</em>',
     'Good skin doesn’t need twelve products. It needs the right three, every morning.': 'البشرة الجميلة لا تحتاج إلى اثني عشر منتجًا، بل إلى ثلاثة مناسبة كل صباح.',
     'Cleanse': 'نظّفي', 'Treat': 'عالجي', 'Protect': 'احمي',

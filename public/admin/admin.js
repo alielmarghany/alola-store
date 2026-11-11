@@ -832,7 +832,10 @@
           <p class="note" style="margin-bottom:12px">Ready-made banner pictures fill the whole box, like the ads on big stores. Text and drawings are hidden. Best size: <b>1400&nbsp;×&nbsp;1000 pixels</b>; keep important text away from the edges. With two or more, they turn every 5 seconds and visitors can use the arrows. If a banner has English text, add an Arabic version for Arabic visitors.</p>
           <div class="sl-list" id="h_${box}_slides"></div>
           <label class="btn ln" style="cursor:pointer;margin-top:4px">${I.plus} Add banner<input type="file" id="h_${box}_add" accept="image/png,image/jpeg,image/webp" class="sr"></label>
-        </div></div>`).join('')}`;
+        </div></div>`).join('')}
+      <div class="card" id="hLogos"><h2>Brand logos</h2>
+        <p class="note" style="margin:-6px 0 12px">Shown in the home page’s “Shop by brand” section, under each category the brand sells in. A logo is saved as soon as you upload it. A PNG with a transparent or white background looks best. Brands without a logo show their name.</p>
+        <div class="logo-admin" id="hLogoList"><div class="skeleton" style="height:120px"></div></div></div>`;
     $('#sub').textContent = saved ? 'Showing your saved boxes' : 'Showing the original design';
 
     const val = id => $(`#${id}`, el).value.trim();
@@ -896,8 +899,38 @@
         db.upload(file).then(url => { slides[b].push({ image: url, image_ar: '', link: '', alt: '' }); drawSlides(b); page.dirty = true; }).catch(fail);
       };
     }
-    el.addEventListener('input', () => { page.dirty = true; });
-    el.addEventListener('change', e => { if (e.target.type !== 'file') page.dirty = true; });
+    el.addEventListener('input', e => { if (!e.target.closest('#hLogos')) page.dirty = true; });
+    el.addEventListener('change', e => { if (e.target.type !== 'file' && !e.target.closest('#hLogos')) page.dirty = true; });
+    drawLogos();
+
+    // Brand logos save one at a time, straight away, so they don't wait for "Save changes".
+    async function drawLogos() {
+      const box = $('#hLogoList', el);
+      let rows, logos;
+      try { [rows, logos] = await Promise.all([productsState.rows.length ? productsState.rows : db.products(), db.brandLogos()]); }
+      catch (e) { box.innerHTML = ''; return fail(e); }
+      if (token !== viewToken) return;
+      const map = Object.fromEntries(logos.map(l => [l.brand, l.logo]));
+      const brands = [...new Set(rows.map(p => p.brand))].sort((a, b) => a.localeCompare(b));
+      box.innerHTML = brands.map(b => `<div class="logo-row" data-b="${esc(b)}">
+          <div class="logo-pv">${map[b] ? `<img src="${esc(map[b])}" alt="${esc(b)} logo">` : `<span>${esc(b)}</span>`}</div>
+          <div><b>${esc(b)}</b><small class="note" style="display:block">${map[b] ? 'Logo set' : 'No logo yet'}</small></div>
+          <div class="up"><label class="btn ln" style="cursor:pointer">${map[b] ? 'Change' : 'Upload'}<input type="file" accept="image/png,image/jpeg,image/webp" class="sr" aria-label="Upload ${esc(b)} logo"></label>
+            ${map[b] ? '<button type="button" class="btn ln" data-rm>Remove</button>' : ''}</div></div>`).join('');
+      $$('.logo-row', box).forEach(row => {
+        const b = row.dataset.b;
+        $('input[type=file]', row).onchange = async e => {
+          const file = e.target.files[0]; e.target.value = '';
+          if (!file) return;
+          try { await db.setBrandLogo(b, await db.upload(file)); toast(`${b} logo saved`); drawLogos(); } catch (ex) { fail(ex); }
+        };
+        const rm = $('[data-rm]', row);
+        if (rm) rm.onclick = async () => {
+          if (!(await confirmDialog(`Remove the ${b} logo?`, 'The home page shows the brand’s name instead until you upload a new one.', 'Remove logo', 'Keep it'))) return;
+          try { await db.removeBrandLogo(b); toast(`${b} logo removed`); drawLogos(); } catch (ex) { fail(ex); }
+        };
+      });
+    }
 
     function collect() {
       const out = {};

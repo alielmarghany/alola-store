@@ -121,6 +121,13 @@ create table store_settings (
 );
 insert into store_settings default values;
 
+-- Each brand's logo, shown in the home page's brands section. Brands without one show their name.
+create table brand_logos (
+  brand text primary key check (char_length(brand) between 2 and 60),
+  logo text not null check (logo ~ '^https://[^\s"''<>()\\]+$'),
+  updated_at timestamptz not null default now()
+);
+
 -- Themes booked for a set period. While one is running it overrides store_settings.theme,
 -- and afterwards the store goes back to that theme by itself. Periods can't overlap.
 create table theme_schedule (
@@ -636,6 +643,7 @@ alter table store_settings enable row level security;
 alter table customer_profiles enable row level security;
 alter table discount_codes enable row level security;
 alter table theme_schedule enable row level security;
+alter table brand_logos enable row level security;
 
 create policy "Live products are public" on products for select to anon, authenticated using (active or is_admin());
 create policy "Admins add products" on products for insert to authenticated with check (is_admin());
@@ -648,6 +656,10 @@ create policy "Admins delete discount codes" on discount_codes for delete to aut
 create policy "Admins read theme schedule" on theme_schedule for select to authenticated using (is_admin());
 create policy "Admins delete theme schedule" on theme_schedule for delete to authenticated using (is_admin());
 create policy "Settings are public" on store_settings for select to anon, authenticated using (true);
+create policy "Brand logos are public" on brand_logos for select to anon, authenticated using (true);
+create policy "Admins add brand logos" on brand_logos for insert to authenticated with check (is_admin());
+create policy "Admins change brand logos" on brand_logos for update to authenticated using (is_admin()) with check (is_admin());
+create policy "Admins remove brand logos" on brand_logos for delete to authenticated using (is_admin());
 create policy "Admins read notifications" on notifications for select to authenticated using (is_admin());
 create policy "Admins mark notifications read" on notifications for update to authenticated using (is_admin()) with check (is_admin());
 create policy "Customers read their own details" on customer_profiles for select to authenticated using (user_id = auth.uid());
@@ -657,7 +669,8 @@ create policy "Customers edit their own details" on customer_profiles for update
 
 revoke all on all tables in schema public from anon, authenticated;
 revoke all on all functions in schema public from public, anon, authenticated;
-grant select on products, store_settings to anon, authenticated;
+grant select on products, store_settings, brand_logos to anon, authenticated;
+grant insert, update, delete on brand_logos to authenticated;
 grant insert, update, delete on products to authenticated;
 grant select, update on notifications to authenticated;
 grant select, insert, update on customer_profiles to authenticated;

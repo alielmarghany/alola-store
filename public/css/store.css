@@ -174,7 +174,6 @@ section{padding:72px 0}
 .step .no{font:800 72px/1 var(--display);-webkit-text-stroke:1.5px var(--sand);color:transparent}
 .step h3{font-size:34px;margin:14px 0 8px}
 .step p{color:#d6c9bb;max-width:420px}
-.step a{color:var(--sand);font-weight:700;display:inline-block;margin-top:14px;border-bottom:1.5px solid currentColor}
 .step .inline-art{display:none}
 
 /* ------- brands marquee ------- */
@@ -495,4 +494,26 @@ h1,h2,h3{text-wrap:balance}
 @media(max-width:900px){
   .bento .tile.is-banner{min-height:0;aspect-ratio:7/5} /* same shape as on computers, so one 1400×1000 picture fits both */
   .bento:has(.t2.is-banner,.t3.is-banner) .t2,.bento:has(.t2.is-banner,.t3.is-banner) .t3{grid-column:1/-1} /* a banner needs the full width; keep both small boxes in step */
+}
+/* ------- brands by category (in the old ritual section) ------- */
+.r-cats{display:grid;gap:6px;margin-top:26px}
+.r-cat{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:10px;padding:12px 16px;border-radius:16px;color:#d6c9bb;border:1px solid transparent;transition:background-color .3s,color .3s,border-color .3s}
+.r-cat b{font:800 22px/1 var(--display);color:transparent;-webkit-text-stroke:1px currentColor}
+.r-cat span{font:700 20px var(--display)}
+.r-cat small{font-size:13px;opacity:.7}
+.r-cat:hover{color:#fff}
+.r-cat.on{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16);color:#fff}
+.r-cat.on b{-webkit-text-stroke-color:var(--sand)}
+.logos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:22px}
+.logo-card{aspect-ratio:3/2;background:#fff;border-radius:18px;display:grid;place-items:center;padding:16px 18px;transition:transform .3s var(--ease),box-shadow .3s}
+.logo-card:hover{transform:translateY(-4px);box-shadow:0 16px 30px -14px rgba(0,0,0,.5)}
+.logo-card img{max-width:100%;max-height:100%;object-fit:contain}
+.logo-name{font:800 20px/1.1 var(--display);color:var(--ink);text-align:center;letter-spacing:-.02em}
+@media(max-width:900px){
+  .r-cats{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .r-cat{display:inline-flex;gap:8px;padding:8px 14px;border-color:rgba(255,255,255,.16)}
+  .r-cat b{display:none}.r-cat span{font-size:15px}
+  .logos{grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+  .logo-card{padding:12px;border-radius:14px}
+  .logo-name{font-size:16px}
 }

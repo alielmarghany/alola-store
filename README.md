@@ -20,6 +20,7 @@ A cosmetics store and admin dashboard. The site is static files hosted on **GitH
 - Customers: contact details, total spent and order history
 - Live new-order alerts: bell counter, pop-up, sound, tab title count and optional desktop alerts
 - Discount codes: a percentage off, an amount off or free delivery, with optional minimum order, usage limit and expiry date
+- Brand logos (Home page tab): upload each brand's logo for the home page's "Shop by brand" section, which lists brands under each category they sell in
 - Home page: edit the three boxes at the top of the home page for offers and ads: text in English and Arabic, buttons and links, a picture (in the drawing's place or filling the box) and a background colour, or full-box banner pictures that play as a slideshow (with Arabic versions and links), with a preview before saving
 - Themes: switch the live store between the normal look, New Year, Halloween, Ramadan and Eid, straight away or scheduled for set dates
 
