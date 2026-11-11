@@ -820,14 +820,56 @@
         <button class="btn ln" id="hReset">Reset to original</button><button class="btn ln" id="hPreview">Preview</button><button class="btn" id="hSave">Save changes</button></div>
       <div class="form-err" id="hErr" role="alert" hidden></div>
       ${HERO_BOXES.map(([box, title, help, texts]) => `<div class="card" style="margin-bottom:14px"><h2>${title}</h2><p class="note" style="margin:-6px 0 12px">${help}</p>
+        <div class="radios kind" role="radiogroup" aria-label="What this box shows">
+          <label class="tg"><input type="radio" name="h_${box}_kind" value="text" ${v(box, 'mode') !== 'banner' ? 'checked' : ''}> Text and drawing</label>
+          <label class="tg"><input type="radio" name="h_${box}_kind" value="banner" ${v(box, 'mode') === 'banner' ? 'checked' : ''}> Banner pictures (ads)</label></div>
+        <div id="h_${box}_textwrap">
         ${texts.map(t => textPair(box, t)).join('')}
         ${box === 'main' ? `<div class="f2">${linkField(box, 'btn1_link', 'Button 1 link')}${linkField(box, 'btn2_link', 'Button 2 link')}</div><p class="note" style="margin:-4px 0 12px">A button shows only when it has both text and a link.</p>`
           : linkField(box, 'link', 'Link (optional): makes the whole box clickable')}
-        ${picture(box)}${colour(box)}</div>`).join('')}`;
+        ${picture(box)}${colour(box)}</div>
+        <div id="h_${box}_bannerwrap">
+          <p class="note" style="margin-bottom:12px">Ready-made banner pictures fill the whole box, like the ads on big stores. Text and drawings are hidden. Best size: <b>1400&nbsp;×&nbsp;1000 pixels</b>; keep important text away from the edges. With two or more, they turn every 5 seconds and visitors can use the arrows. If a banner has English text, add an Arabic version for Arabic visitors.</p>
+          <div class="sl-list" id="h_${box}_slides"></div>
+          <label class="btn ln" style="cursor:pointer;margin-top:4px">${I.plus} Add banner<input type="file" id="h_${box}_add" accept="image/png,image/jpeg,image/webp" class="sr"></label>
+        </div></div>`).join('')}`;
     $('#sub').textContent = saved ? 'Showing your saved boxes' : 'Showing the original design';
 
     const val = id => $(`#${id}`, el).value.trim();
     const images = Object.fromEntries(HERO_BOXES.map(([b]) => [b, v(b, 'image')]));
+    // Banner pictures per box, in the order they play.
+    const slides = Object.fromEntries(HERO_BOXES.map(([b]) => [b, (data[b]?.slides || []).map(s => ({ ...s }))]));
+    function drawSlides(b) {
+      const list = $(`#h_${b}_slides`, el), n = slides[b].length;
+      list.innerHTML = n ? slides[b].map((s, i) => `<div class="sl-row" data-i="${i}">
+          <div class="sl-pics"><div class="pv-img sl-pv"><img src="${esc(s.image)}" alt=""><span>English</span></div>
+            <div class="pv-img sl-pv">${s.image_ar ? `<img src="${esc(s.image_ar)}" alt="">` : '<span class="note">Same as English</span>'}<span>Arabic</span></div></div>
+          <div class="sl-fields">
+            <div class="up"><label class="btn ln" style="cursor:pointer">Change picture<input type="file" data-up="image" accept="image/png,image/jpeg,image/webp" class="sr"></label>
+              <label class="btn ln" style="cursor:pointer">${s.image_ar ? 'Change Arabic' : 'Add Arabic version'}<input type="file" data-up="image_ar" accept="image/png,image/jpeg,image/webp" class="sr"></label>
+              ${s.image_ar ? '<button type="button" class="btn ln" data-rmar>Remove Arabic</button>' : ''}</div>
+            <div class="fld" style="margin-top:10px"><label for="h_${b}_sl${i}_link">Link (optional)</label><input class="in" id="h_${b}_sl${i}_link" data-k="link" maxlength="300" autocomplete="off" spellcheck="false" inputmode="url" placeholder="shop.html?brand=Anua" value="${esc(s.link)}"></div>
+            <div class="fld"><label for="h_${b}_sl${i}_alt">What the banner says (read out to blind visitors)</label><input class="in" id="h_${b}_sl${i}_alt" data-k="alt" maxlength="120" autocomplete="off" placeholder="Anua serums 30% off" value="${esc(s.alt)}"></div>
+          </div>
+          <div class="sl-acts"><span class="note">${i + 1} of ${n}</span>
+            <button type="button" class="btn ln" data-mv="-1" ${i ? '' : 'disabled'} aria-label="Move banner ${i + 1} earlier">↑</button>
+            <button type="button" class="btn ln" data-mv="1" ${i < n - 1 ? '' : 'disabled'} aria-label="Move banner ${i + 1} later">↓</button>
+            <button type="button" class="btn ln dg-t" data-del aria-label="Remove banner ${i + 1}">Remove</button></div>
+        </div>`).join('') : '<div class="empty" style="padding:22px 10px"><b>No banners yet</b>Add a picture to start.</div>';
+      $$('.sl-row', list).forEach(row => {
+        const i = +row.dataset.i, s = slides[b][i];
+        $$('[data-k]', row).forEach(inp => inp.oninput = () => { s[inp.dataset.k] = inp.value.trim(); });
+        $$('[data-up]', row).forEach(inp => inp.onchange = e => {
+          const file = e.target.files[0]; e.target.value = '';
+          if (file) db.upload(file).then(url => { s[inp.dataset.up] = url; drawSlides(b); page.dirty = true; }).catch(fail);
+        });
+        const rmar = $('[data-rmar]', row); if (rmar) rmar.onclick = () => { s.image_ar = ''; drawSlides(b); page.dirty = true; };
+        $$('[data-mv]', row).forEach(btn => btn.onclick = () => {
+          const j = i + +btn.dataset.mv; [slides[b][i], slides[b][j]] = [slides[b][j], slides[b][i]]; drawSlides(b); page.dirty = true;
+        });
+        $('[data-del]', row).onclick = () => { slides[b].splice(i, 1); drawSlides(b); page.dirty = true; };
+      });
+    }
     const showPic = b => {
       $(`#h_${b}_pv`, el).innerHTML = images[b] ? `<img src="${esc(images[b])}" alt="">` : '<span class="note">None</span>';
       $(`#h_${b}_rm`, el).hidden = !images[b];
@@ -841,6 +883,18 @@
         db.upload(file).then(url => { images[b] = url; showPic(b); page.dirty = true; }).catch(fail);
       };
       $(`#h_${b}_bg`, el).addEventListener('input', () => { $(`#h_${b}_bgon`, el).checked = true; });
+      // Text mode or banner mode: show only that part of the form.
+      const kind = () => $(`input[name="h_${b}_kind"]:checked`, el).value;
+      const showKind = () => { $(`#h_${b}_textwrap`, el).hidden = kind() !== 'text'; $(`#h_${b}_bannerwrap`, el).hidden = kind() !== 'banner'; };
+      $$(`input[name="h_${b}_kind"]`, el).forEach(r => r.onchange = showKind);
+      showKind();
+      drawSlides(b);
+      $(`#h_${b}_add`, el).onchange = e => {
+        const file = e.target.files[0]; e.target.value = '';
+        if (!file) return;
+        if (slides[b].length >= 8) return toast('A box can have 8 banners at most', 'err');
+        db.upload(file).then(url => { slides[b].push({ image: url, image_ar: '', link: '', alt: '' }); drawSlides(b); page.dirty = true; }).catch(fail);
+      };
     }
     el.addEventListener('input', () => { page.dirty = true; });
     el.addEventListener('change', e => { if (e.target.type !== 'file') page.dirty = true; });
@@ -857,6 +911,10 @@
         box.image = images[b];
         box.image_mode = $(`input[name="h_${b}_mode"]:checked`, el).value;
         box.bg = $(`#h_${b}_bgon`, el).checked ? $(`#h_${b}_bg`, el).value.toLowerCase() : '';
+        box.mode = $(`input[name="h_${b}_kind"]:checked`, el).value;
+        box.slides = slides[b].map(s => ({ image: s.image, image_ar: s.image_ar || '', link: (s.link || '').trim(), alt: (s.alt || '').trim() }));
+        if (box.slides.some(s => s.link && !AlolaHero.safeLink(s.link))) throw new Error('Banner links must start with https:// or be a page of this store, like shop.html');
+        if (box.mode === 'banner' && !box.slides.length) throw new Error(`Add at least one banner picture to the ${HERO_BOXES.find(x => x[0] === b)[1].toLowerCase()}, or switch it back to text.`);
       }
       return out;
     }

@@ -11,7 +11,7 @@
   let heroData = previewing ? readJSON('alola_hero_preview') : readJSON(HERO_KEY), heroPics = {}, products = null;
   function drawHero() {
     heroPics = AlolaHero.render(heroData);
-    $('#stageWreath').innerHTML = alolaWreath({ leaves: 32 });
+    const wreath = $('#stageWreath'); if (wreath) wreath.innerHTML = alolaWreath({ leaves: 32 }); // a banner box has no wreath
     drawHeroArt();
   }
   // Drawings of real catalogue items fill the picture spots that have no custom picture.

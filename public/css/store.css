@@ -477,3 +477,22 @@ h1,h2,h3{text-wrap:balance}
 .tile-link{position:absolute;inset:0;z-index:3;border-radius:inherit}
 .tile:has(.tile-link):hover{transform:translateY(-3px)}
 .tile:has(.tile-link){transition:transform .3s var(--ease)}
+/* ------- banner boxes: designed pictures only, as a slideshow when there are several ------- */
+.tile.is-banner{padding:0;background:var(--bg2)}
+.tile.is-banner .slides{position:absolute;inset:0}
+.tile.is-banner .slide{position:absolute;inset:0;opacity:0;transition:opacity .6s ease}
+.tile.is-banner .slide.on{opacity:1}
+.tile.is-banner .slide a{display:block;width:100%;height:100%}
+.tile.is-banner .slide img{width:100%;height:100%;object-fit:cover;display:block}
+.sl-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.88);color:var(--ink);font:700 26px/1 var(--body);display:grid;place-items:center;box-shadow:0 6px 16px rgba(0,0,0,.18);opacity:0;transition:opacity .25s,background-color .25s}
+.sl-arrow.prev{inset-inline-start:12px}.sl-arrow.next{inset-inline-end:12px}
+.tile.is-banner:hover .sl-arrow,.tile.is-banner:focus-within .sl-arrow{opacity:1}
+.sl-arrow:hover{background:#fff}
+.sl-dots{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:2;display:flex;gap:6px;padding:5px 8px;border-radius:99px;background:rgba(0,0,0,.28)}
+.sl-dots button{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.55);padding:0;transition:background-color .25s,transform .25s}
+.sl-dots button[aria-current]{background:#fff;transform:scale(1.25)}
+@media(hover:none){.sl-arrow{opacity:1;width:34px;height:34px;font-size:22px}}
+@media(max-width:900px){
+  .bento .tile.is-banner{min-height:0;aspect-ratio:7/5} /* same shape as on computers, so one 1400×1000 picture fits both */
+  .bento:has(.t2.is-banner,.t3.is-banner) .t2,.bento:has(.t2.is-banner,.t3.is-banner) .t3{grid-column:1/-1} /* a banner needs the full width; keep both small boxes in step */
+}

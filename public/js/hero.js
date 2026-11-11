@@ -42,23 +42,75 @@ window.AlolaHero = (function () {
     return img && box.image_mode !== 'cover' ? img : '';
   }
 
+  // ---------------------------------------- banner slideshows
+  let timers = [];
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ar = () => !!(window.T && T.ar);
+  /** Fills a box with designed banner pictures only. More than one turns into a slideshow. */
+  function banner(tile, box, label) {
+    const slides = (box.slides || []).map(s => ({ src: safeImage((ar() && s.image_ar) || s.image), link: safeLink(s.link || ''), alt: s.alt || '' })).filter(s => s.src);
+    tile.classList.remove('has-cover', 'on-light', 'on-dark');
+    tile.style.background = '';
+    tile.classList.add('is-banner');
+    const many = slides.length > 1;
+    tile.innerHTML = `<div class="slides"${many ? ` role="region" aria-roledescription="carousel" aria-label="${esc(label)}"` : ''}>
+      ${slides.map((s, i) => {
+        const img = `<img src="${esc(s.src)}" alt="${esc(s.alt)}" ${i ? 'loading="lazy"' : 'fetchpriority="high"'} decoding="async">`;
+        return `<div class="slide${i ? '' : ' on'}"${many ? ` role="group" aria-roledescription="slide" aria-label="${i + 1} / ${slides.length}"` : ''}${i ? ' inert' : ''}>${s.link ? `<a href="${esc(s.link)}"${s.alt ? '' : ` aria-label="${esc(label)} ${i + 1}"`}>${img}</a>` : img}</div>`;
+      }).join('')}
+      ${many ? `<button class="sl-arrow prev" type="button" aria-label="${ar() ? 'السابق' : 'Previous'}">‹</button><button class="sl-arrow next" type="button" aria-label="${ar() ? 'التالي' : 'Next'}">›</button>
+        <div class="sl-dots">${slides.map((_, i) => `<button type="button" aria-label="${i + 1}"${i ? '' : ' aria-current="true"'}></button>`).join('')}</div>` : ''}</div>`;
+    if (!many) return;
+    const all = [...tile.querySelectorAll('.slide')], dots = [...tile.querySelectorAll('.sl-dots button')];
+    let at = 0, paused = false;
+    const go = n => {
+      at = (n + all.length) % all.length;
+      all.forEach((s, i) => { s.classList.toggle('on', i === at); s.inert = i !== at; });
+      dots.forEach((d, i) => i === at ? d.setAttribute('aria-current', 'true') : d.removeAttribute('aria-current'));
+    };
+    tile.querySelector('.prev').onclick = () => go(at - (document.dir === 'rtl' ? -1 : 1));
+    tile.querySelector('.next').onclick = () => go(at + (document.dir === 'rtl' ? -1 : 1));
+    dots.forEach((d, i) => d.onclick = () => go(i));
+    // Swipe on phones.
+    let x0 = null;
+    tile.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+    tile.addEventListener('touchend', e => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0; x0 = null;
+      if (Math.abs(dx) > 40) go(at + ((dx < 0) !== (document.dir === 'rtl') ? 1 : -1));
+    });
+    // Turns every 5 seconds, but never while the visitor is pointing at it or using it with the keyboard.
+    tile.addEventListener('mouseenter', () => paused = true); tile.addEventListener('mouseleave', () => paused = false);
+    tile.addEventListener('focusin', () => paused = true); tile.addEventListener('focusout', () => paused = false);
+    if (!reduced) timers.push(setInterval(() => { if (!paused && !document.hidden) go(at + 1); }, 5000));
+  }
+
   /** Draws the boxes. Returns which picture spots now hold a custom picture. */
   function render(data) {
+    timers.forEach(clearInterval); timers = [];
     const h = data && data.main ? data : DEFAULT, custom = data && data.main;
     const m = h.main, hero = document.getElementById('hero');
     if (!hero) return {};
+    document.querySelectorAll('.bento .tile').forEach(t => t.classList.remove('is-banner'));
+    const isBanner = b => b && b.mode === 'banner' && (b.slides || []).length;
     const eyebrow = say(m, 'eyebrow'), l1 = say(m, 'line1'), l2 = say(m, 'line2'), text = say(m, 'text');
     const buttons = [[say(m, 'btn1_label'), safeLink(m.btn1_link || ''), 'btn'], [say(m, 'btn2_label'), safeLink(m.btn2_link || ''), 'btn gh']]
       .filter(([label, link]) => label && link)
       .map(([label, link, cls], i) => `<a class="${cls}" href="${esc(link)}">${esc(label)}${i === 0 ? ' ' + ARROW : ''}</a>`).join('');
-    hero.innerHTML = `${eyebrow ? `<span class="eyebrow${custom ? ' custom' : ''}">${esc(eyebrow)}</span>` : '<span class="eyebrow-gap"></span>'}
-      <div class="stage" id="stage"><div class="par" data-depth="10" id="stageWreath"></div><div class="par" data-depth="26"><div class="hero-pack" id="heroPack"></div></div></div>
-      <h1>${l1 ? `<span class="ln-m"><span>${esc(l1)}</span></span>` : ''}${l2 ? `<span class="ln-m"><span><em>${esc(l2)}</em></span></span>` : ''}</h1>
-      ${text ? `<p>${esc(text)}</p>` : ''}${buttons ? `<div class="acts">${buttons}</div>` : ''}`;
-    const out = { main: paint(hero, m) };
+    const out = {};
+    if (isBanner(m)) { banner(hero, m, ar() ? 'العروض' : 'Offers'); out.main = 'banner'; }
+    else {
+      hero.innerHTML = `${eyebrow ? `<span class="eyebrow${custom ? ' custom' : ''}">${esc(eyebrow)}</span>` : '<span class="eyebrow-gap"></span>'}
+        <div class="stage" id="stage"><div class="par" data-depth="10" id="stageWreath"></div><div class="par" data-depth="26"><div class="hero-pack" id="heroPack"></div></div></div>
+        <h1>${l1 ? `<span class="ln-m"><span>${esc(l1)}</span></span>` : ''}${l2 ? `<span class="ln-m"><span><em>${esc(l2)}</em></span></span>` : ''}</h1>
+        ${text ? `<p>${esc(text)}</p>` : ''}${buttons ? `<div class="acts">${buttons}</div>` : ''}`;
+      out.main = paint(hero, m);
+      if (out.main) document.getElementById('heroPack').innerHTML = `<img src="${esc(out.main)}" alt="${esc([l1, l2].join(' ').trim())}">`;
+    }
     for (const k of ['t2', 't3']) {
       const b = h[k] || {}, tile = document.getElementById(k === 't2' ? 'tileT2' : 'tileT3');
       if (!tile) continue;
+      if (isBanner(b)) { banner(tile, b, ar() ? 'العروض' : 'Offers'); out[k] = 'banner'; continue; }
       const title = say(b, 'title'), small = say(b, 'text'), link = safeLink(b.link || '');
       tile.innerHTML = `${title ? `<div class="big">${esc(title)}</div>` : ''}${small ? `<small>${esc(small)}</small>` : ''}
         <div class="tile-art" id="art${k.toUpperCase()}"></div>
@@ -66,9 +118,7 @@ window.AlolaHero = (function () {
       out[k] = paint(tile, b);
     }
     // Pictures shown in the drawing spots replace the product drawings there.
-    if (out.main) document.getElementById('heroPack').innerHTML = `<img src="${esc(out.main)}" alt="${esc([l1, l2].join(' ').trim())}">`;
-    if (out.t2) document.getElementById('artT2').innerHTML = `<img src="${esc(out.t2)}" alt="">`;
-    if (out.t3) document.getElementById('artT3').innerHTML = `<img src="${esc(out.t3)}" alt="">`;
+    for (const k of ['t2', 't3']) if (out[k] && out[k] !== 'banner') document.getElementById('art' + k.toUpperCase()).innerHTML = `<img src="${esc(out[k])}" alt="">`;
     return out;
   }
   return { DEFAULT, render, safeLink, safeImage };

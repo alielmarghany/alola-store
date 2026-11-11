@@ -470,6 +470,17 @@ test('the home page hero is set by admins, cleaned, and readable by everyone', a
     await assert.rejects(admin('select admin_set_hero($1::jsonb)', [JSON.stringify(bad)]), /./, JSON.stringify(bad));
   }
   assert.deepEqual((await one(anon('select hero from store_settings'))).hero, saved);
+  assert.equal(saved.main.mode, 'text');
+  // Banner mode: a slideshow of designed pictures, each with an optional Arabic picture and link.
+  const pic = n => `https://x.supabase.co/storage/v1/object/public/product-images/${n}.webp`;
+  const banners = { ...hero, main: { mode: 'banner', slides: [{ image: pic(1), image_ar: pic(2), link: 'shop.html?brand=Anua', alt: 'Anua 30% off' }, { image: pic(3), extra: 'x' }] } };
+  const b = (await one(admin('select admin_set_hero($1::jsonb) r', [JSON.stringify(banners)]))).r;
+  assert.equal(b.main.mode, 'banner');
+  assert.deepEqual(b.main.slides, [{ image: pic(1), image_ar: pic(2), link: 'shop.html?brand=Anua', alt: 'Anua 30% off' }, { image: pic(3), image_ar: '', link: '', alt: '' }]);
+  for (const bad of [{ main: { mode: 'banner', slides: [] } }, { main: { mode: 'banner', slides: [{ image: '' }] } }, { main: { mode: 'banner', slides: [{ image: pic(1), link: 'javascript:x' }] } },
+    { main: { mode: 'banner', slides: [{ image: 'http://x.example/a.png' }] } }, { main: { mode: 'banner', slides: Array(9).fill({ image: pic(1) }) } }]) {
+    await assert.rejects(admin('select admin_set_hero($1::jsonb)', [JSON.stringify(bad)]), /./, JSON.stringify(bad));
+  }
   await admin('select admin_set_hero(null)');
   assert.equal((await one(anon('select hero from store_settings'))).hero, null);
 });

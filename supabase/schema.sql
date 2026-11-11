@@ -380,28 +380,55 @@ end $$;
 
 -- Cleans one hero box from the dashboard: only known fields, length limits, and links,
 -- pictures and colours in a safe form, since every visitor's browser shows them.
+-- A link is a full https:// address or a page of this store, like shop.html or #reviews. Nothing else, so no javascript: links.
+create function hero_link(v text) returns text language plpgsql immutable set search_path = public as $$
+begin
+  v := btrim(coalesce(v, ''));
+  if v <> '' and not (v ~ '^https://[^\s"''<>\\]+$' or (v ~ '^[A-Za-z0-9_#?./][A-Za-z0-9_./?=&%#+-]*$' and v !~ '^//')) then
+    raise exception 'Links must start with https:// or be a page of this store, like shop.html';
+  end if;
+  return v;
+end $$;
+
+create function hero_image(v text) returns text language plpgsql immutable set search_path = public as $$
+begin
+  v := btrim(coalesce(v, ''));
+  if v <> '' and v !~ '^https://[^\s"''<>()\\]+$' then raise exception 'That picture address isn’t valid'; end if;
+  return v;
+end $$;
+
 create function hero_box(b jsonb, keys text[], lims integer[]) returns jsonb language plpgsql immutable set search_path = public as $$
 declare
   o jsonb := '{}';
   v text;
+  s jsonb;
+  v_slides jsonb := '[]';
 begin
   for i in 1 .. array_length(keys, 1) loop
     v := btrim(coalesce(b->>keys[i], ''));
     if char_length(v) > lims[i] then raise exception 'Some text is too long (% characters at most)', lims[i]; end if;
-    -- A link is a full https:// address or a page of this store, like shop.html or #reviews. Nothing else, so no javascript: links.
-    if keys[i] like '%link' and v <> '' and not (v ~ '^https://[^\s"''<>\\]+$' or (v ~ '^[A-Za-z0-9_#?./][A-Za-z0-9_./?=&%#+-]*$' and v !~ '^//')) then
-      raise exception 'Links must start with https:// or be a page of this store, like shop.html';
-    end if;
+    if keys[i] like '%link' then v := hero_link(v); end if;
     o := o || jsonb_build_object(keys[i], v);
   end loop;
-  v := btrim(coalesce(b->>'image', ''));
-  if v <> '' and v !~ '^https://[^\s"''<>()\\]+$' then raise exception 'That picture address isn’t valid'; end if;
-  o := o || jsonb_build_object('image', v);
+  o := o || jsonb_build_object('image', hero_image(b->>'image'));
   v := coalesce(b->>'image_mode', 'art');
   o := o || jsonb_build_object('image_mode', case when v in ('art', 'cover') then v else 'art' end);
   v := lower(btrim(coalesce(b->>'bg', '')));
   if v <> '' and v !~ '^#[0-9a-f]{6}$' then raise exception 'Colours must look like #66794a'; end if;
-  return o || jsonb_build_object('bg', v);
+  o := o || jsonb_build_object('bg', v);
+  -- Banner mode: the box shows only designed pictures (an ad slideshow), each with an optional Arabic version and link.
+  if jsonb_typeof(b->'slides') = 'array' then
+    if jsonb_array_length(b->'slides') > 8 then raise exception 'A box can have 8 banners at most'; end if;
+    for s in select value from jsonb_array_elements(b->'slides') loop
+      if jsonb_typeof(s) <> 'object' or hero_image(s->>'image') = '' then raise exception 'Every banner needs a picture'; end if;
+      if char_length(btrim(coalesce(s->>'alt', ''))) > 120 then raise exception 'Banner descriptions can be 120 characters at most'; end if;
+      v_slides := v_slides || jsonb_build_array(jsonb_build_object('image', hero_image(s->>'image'), 'image_ar', hero_image(s->>'image_ar'),
+        'link', hero_link(s->>'link'), 'alt', btrim(coalesce(s->>'alt', ''))));
+    end loop;
+  end if;
+  v := case when b->>'mode' = 'banner' then 'banner' else 'text' end;
+  if v = 'banner' and jsonb_array_length(v_slides) = 0 then raise exception 'Add at least one banner picture, or switch the box back to text'; end if;
+  return o || jsonb_build_object('mode', v, 'slides', v_slides);
 end $$;
 
 -- Saves the home page hero from the dashboard. Null puts the built-in design back.
