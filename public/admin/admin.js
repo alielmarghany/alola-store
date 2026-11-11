@@ -32,6 +32,7 @@
     customers: SVG('<circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M16 4a4 4 0 0 1 0 8M22 21c0-3-1.500-5-4-5.700"/>'),
     discounts: SVG('<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9zM8 8v.01M15.500 8.500l-7 7"/>'),
     analytics: SVG('<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>'),
+    popups: SVG('<rect x="3" y="5" width="18" height="14" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1.500"/>'),
     home: SVG('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 13h5M8 16h8"/>'),
     themes: SVG('<path d="M12 3a9 9 0 1 0 0 18c1.500 0 2-1 2-2 0-1.500-1-2-1-3 0-1 1-2 2-2h2a4 4 0 0 0 4-4c0-4-4-7-9-7z"/><circle cx="7.500" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/>'),
     store: SVG('<path d="M3 10v10h18V10M2 10l2-6h16l2 6zM9 20v-6h6v6"/>'),
@@ -77,7 +78,7 @@
   }
 
   // ------------------------------------------------------------ shell + routing
-  const NAV = [['overview', 'Overview'], ['analytics', 'Analytics'], ['orders', 'Orders'], ['products', 'Products'], ['customers', 'Customers'], ['discounts', 'Discounts'], ['home', 'Home page'], ['themes', 'Themes']];
+  const NAV = [['overview', 'Overview'], ['analytics', 'Analytics'], ['orders', 'Orders'], ['products', 'Products'], ['customers', 'Customers'], ['discounts', 'Discounts'], ['home', 'Home page'], ['popups', 'Pop-ups'], ['themes', 'Themes']];
   const notif = { unread: 0, rows: [], pop: false };
 
   function renderShell() {
@@ -1230,7 +1231,158 @@
     };
   }
 
-  const VIEWS = { overview: viewOverview, analytics: viewAnalytics, orders: viewOrders, products: viewProducts, customers: viewCustomers, discounts: viewDiscounts, home: viewHome, themes: viewThemes };
+  // ------------------------------------------------------------ pop-ups
+  const POP_PAGES = [['home', 'Home page'], ['shop', 'All products'], ['product', 'Product pages'], ['account', 'Account page']];
+  /** A stored time as Cairo local time for a datetime-local field. */
+  const cairoInput = iso => {
+    if (!iso) return '';
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .formatToParts(new Date(iso)).map(x => [x.type, x.value]));
+    return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+  };
+  function popupStatus(p) {
+    if (!p.active) return ['hidden', 'Off'];
+    if (p.ends_at && new Date(p.ends_at) <= new Date()) return ['out', 'Ended'];
+    if (p.starts_at && new Date(p.starts_at) > new Date()) return ['low', `Starts ${when(p.starts_at)}`];
+    return ['live', 'Live'];
+  }
+  const triggerText = p => p.trigger === 'scroll' ? `after scrolling ${p.trigger_value}%` : p.trigger === 'exit' ? 'when leaving the page' : p.trigger_value ? `after ${p.trigger_value} seconds` : 'straight away';
+  const freqText = p => p.frequency === 'once' ? 'once per visitor' : p.frequency === 'session' ? 'once per visit' : `every ${p.frequency_days} day${p.frequency_days === 1 ? '' : 's'}`;
+
+  async function viewPopups(el, token) {
+    if (!$('#ppList', el)) {
+      el.innerHTML = `<div class="bar"><p class="note" style="flex:1;min-width:240px">Pop-ups for offers, discount codes and email sign-ups. Only one shows per page, the highest priority that fits, and never on checkout.</p>
+        <button class="btn" id="ppAdd">${I.plus} New pop-up</button></div><div id="ppList"><div class="skeleton" style="height:200px"></div></div>`;
+      $('#ppAdd').onclick = () => openPopupForm(null);
+    }
+    let rows;
+    try { rows = await db.popups(); } catch (e) { return fail(e); }
+    if (token !== viewToken) return;
+    const live = rows.filter(p => p.live).length;
+    $('#sub').textContent = `${rows.length} pop-up${rows.length === 1 ? '' : 's'} · ${live} live`;
+    const list = $('#ppList');
+    list.innerHTML = rows.length ? `<div class="pp-cards">${rows.map(p => { const [cls, label] = popupStatus(p), ctr = p.views ? Math.round(p.clicks / p.views * 1000) / 10 : 0;
+      return `<div class="card pp-card">
+        <div class="pp-thumb${p.layout === 'corner' ? ' corner' : ''}">${p.image ? `<img src="${esc(p.image)}" alt="">` : `<span>${p.layout === 'corner' ? 'Corner' : 'Centre'}</span>`}</div>
+        <div class="pp-info"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>${esc(p.title)}</b><span class="st st-${cls}">${esc(label)}</span>${p.code ? `<span class="st st-hidden">Code ${esc(p.code)}</span>` : ''}</div>
+          <small>${p.pages.map(x => POP_PAGES.find(y => y[0] === x)?.[1] || x).join(', ')} · ${triggerText(p)} · ${freqText(p)}${p.audience !== 'all' ? ` · ${p.audience === 'new' ? 'first-time visitors' : 'returning visitors'}` : ''}${p.device !== 'all' ? ` · ${p.device === 'mobile' ? 'phones' : 'computers'} only` : ''}${p.ends_at ? ` · until ${when(p.ends_at)}` : ''}</small>
+          <div class="pp-stats"><span><b class="num">${p.views.toLocaleString()}</b> views</span><span><b class="num">${p.clicks.toLocaleString()}</b> clicks</span><span><b class="num">${ctr}%</b> click rate</span><span class="note">last 30 days</span></div></div>
+        <div class="acts pp-acts"><label class="tg" title="Show on the store"><input type="checkbox" data-on="${p.id}" ${p.active ? 'checked' : ''}> On</label>
+          <button data-edit="${p.id}" aria-label="Edit ${esc(p.title)}">Edit</button><button data-copy="${p.id}" aria-label="Duplicate ${esc(p.title)}">Duplicate</button><button class="del" data-del="${p.id}" aria-label="Delete ${esc(p.title)}">Delete</button></div></div>`; }).join('')}</div>`
+      : `<div class="card empty"><b>No pop-ups yet</b>Create one for an offer, a discount code or email sign-ups.</div>`;
+    const find = id => rows.find(p => p.id === Number(id));
+    $$('[data-on]', list).forEach(c => c.onchange = async () => {
+      try { await db.setPopupActive(Number(c.dataset.on), c.checked); toast(c.checked ? 'Pop-up turned on' : 'Pop-up turned off'); viewPopups(el, viewToken); }
+      catch (e) { c.checked = !c.checked; fail(e); }
+    });
+    $$('[data-edit]', list).forEach(b => b.onclick = () => openPopupForm(find(b.dataset.edit)));
+    $$('[data-copy]', list).forEach(b => b.onclick = () => { const p = find(b.dataset.copy); openPopupForm({ ...p, id: null, active: false, title: `${p.title} (copy)`.slice(0, 80) }); });
+    $$('[data-del]', list).forEach(b => b.onclick = async () => {
+      const p = find(b.dataset.del);
+      if (!(await confirmDialog(`Delete “${p.title}”?`, 'It stops showing on the store straight away, and its view and click counts are removed.', 'Delete pop-up'))) return;
+      try { await db.deletePopup(p.id); toast('Pop-up deleted'); viewPopups(el, viewToken); } catch (e) { fail(e); }
+    });
+  }
+
+  function openPopupForm(p) {
+    const isNew = !p || !p.id;
+    const v = { active: false, layout: 'center', kind: 'offer', title: '', title_ar: '', body: '', body_ar: '', image: '', image_ar: '', code: '', button_label: 'Shop now', button_label_ar: 'تسوقي الآن', button_link: 'shop.html',
+      trigger: 'delay', trigger_value: 5, frequency: 'days', frequency_days: 3, pages: ['home'], audience: 'all', device: 'all', starts_at: null, ends_at: null, priority: 0, ...(p || {}) };
+    const radio = (name, val, label, cur) => `<label class="tg"><input type="radio" name="${name}" value="${val}" ${cur === val ? 'checked' : ''}> ${label}</label>`;
+    const pair = (k, label, max, area, ph = '') => `<div class="f2"><div class="fld"><label for="p_${k}">${label}</label>${area ? `<textarea class="in" id="p_${k}" maxlength="${max}" rows="3" placeholder="${esc(ph)}">${esc(v[k])}</textarea>` : `<input class="in" id="p_${k}" maxlength="${max}" autocomplete="off" placeholder="${esc(ph)}" value="${esc(v[k])}">`}</div>
+      <div class="fld"><label for="p_${k}_ar">${label} (Arabic)</label>${area ? `<textarea class="in" id="p_${k}_ar" dir="rtl" maxlength="${max}" rows="3">${esc(v[k + '_ar'])}</textarea>` : `<input class="in" id="p_${k}_ar" dir="rtl" maxlength="${max}" autocomplete="off" value="${esc(v[k + '_ar'])}">`}</div></div>`;
+    const dr = openDrawer(`<div class="dr-h"><h2>${isNew ? 'New pop-up' : 'Edit pop-up'}</h2>${closeBtn}</div>
+      <form id="ppf" novalidate><div class="form-err" id="ppe" role="alert" hidden></div>
+      <div class="card"><h2>Content</h2>
+        <div class="fld"><span class="lb">Type</span><div class="radios">${radio('p_kind', 'offer', 'Offer with a button', v.kind)}${radio('p_kind', 'newsletter', 'Email sign-up', v.kind)}</div></div>
+        ${pair('title', 'Title', 80, false, 'Eid sale: 20% off')}
+        ${pair('body', 'Text', 300, true, 'Use the code below at checkout. Ends Friday.')}
+        <div class="fld"><label for="p_code">Discount code to show (optional)</label><input class="in" id="p_code" maxlength="30" autocomplete="off" spellcheck="false" style="text-transform:uppercase" placeholder="EID20" value="${esc(v.code)}"><small>Shown with a Copy button. Create the code itself in the Discounts tab.</small></div>
+        <div id="p_btnBox">${pair('button_label', 'Button text', 30, false, 'Shop now')}
+          <div class="fld"><label for="p_button_link">Button link</label><input class="in" id="p_button_link" maxlength="300" autocomplete="off" spellcheck="false" inputmode="url" placeholder="shop.html?brand=Anua" value="${esc(v.button_link)}"><small>${LINK_HELP}</small></div></div>
+        <p class="note" id="p_nlNote">The sign-up form adds emails to your newsletter list. The button text above is used on the sign-up button.</p>
+      </div>
+      <div class="card"><h2>Picture (optional)</h2>
+        <div class="f2">${['image', 'image_ar'].map(k => `<div class="fld"><span class="lb">${k === 'image' ? 'Picture' : 'Arabic picture (if it has text)'}</span>
+          <div class="pv-img pp-pv" id="p_${k}_pv"></div><div class="up"><label class="btn ln" style="cursor:pointer">Upload<input type="file" data-up="${k}" accept="image/png,image/jpeg,image/webp" class="sr"></label><button type="button" class="btn ln" data-rmimg="${k}">Remove</button></div></div>`).join('')}</div>
+        <small class="note">Shown at the top of the pop-up. Wide pictures work best, about 1200 × 600 pixels.</small></div>
+      <div class="card"><h2>Look</h2><div class="radios">${radio('p_layout', 'center', 'Window in the middle of the screen', v.layout)}${radio('p_layout', 'corner', 'Small card in the corner', v.layout)}</div></div>
+      <div class="card"><h2>When and where</h2>
+        <div class="fld"><span class="lb">Show on</span><div class="radios">${POP_PAGES.map(([k, l]) => `<label class="tg"><input type="checkbox" name="p_pages" value="${k}" ${v.pages.includes(k) ? 'checked' : ''}> ${l}</label>`).join('')}</div><small>Never shown on checkout.</small></div>
+        <div class="f2"><div class="fld"><label for="p_trigger">Show it</label><select class="in" id="p_trigger">
+            <option value="delay" ${v.trigger === 'delay' ? 'selected' : ''}>After some seconds</option><option value="scroll" ${v.trigger === 'scroll' ? 'selected' : ''}>After scrolling down</option><option value="exit" ${v.trigger === 'exit' ? 'selected' : ''}>When they’re about to leave</option></select></div>
+          <div class="fld" id="p_tvBox"><label for="p_trigger_value" id="p_tvLabel">Seconds</label><input class="in" id="p_trigger_value" type="number" min="0" max="120" step="1" inputmode="numeric" value="${v.trigger_value}"></div></div>
+        <div class="f2"><div class="fld"><label for="p_frequency">How often</label><select class="in" id="p_frequency">
+            <option value="once" ${v.frequency === 'once' ? 'selected' : ''}>Once per visitor</option><option value="session" ${v.frequency === 'session' ? 'selected' : ''}>Once per visit</option><option value="days" ${v.frequency === 'days' ? 'selected' : ''}>Again after some days</option></select></div>
+          <div class="fld" id="p_fdBox"><label for="p_frequency_days">Days</label><input class="in" id="p_frequency_days" type="number" min="1" max="60" step="1" inputmode="numeric" value="${v.frequency_days}"></div></div>
+        <div class="f2"><div class="fld"><label for="p_audience">Who sees it</label><select class="in" id="p_audience">
+            <option value="all" ${v.audience === 'all' ? 'selected' : ''}>Everyone</option><option value="new" ${v.audience === 'new' ? 'selected' : ''}>First-time visitors</option><option value="returning" ${v.audience === 'returning' ? 'selected' : ''}>Returning visitors</option></select></div>
+          <div class="fld"><label for="p_device">Devices</label><select class="in" id="p_device">
+            <option value="all" ${v.device === 'all' ? 'selected' : ''}>Phones and computers</option><option value="mobile" ${v.device === 'mobile' ? 'selected' : ''}>Phones only</option><option value="desktop" ${v.device === 'desktop' ? 'selected' : ''}>Computers only</option></select></div></div>
+        <div class="f2"><div class="fld"><label for="p_starts">Starts (optional, Cairo time)</label><input class="in" id="p_starts" type="datetime-local" value="${cairoInput(v.starts_at)}"></div>
+          <div class="fld"><label for="p_ends">Ends (optional, Cairo time)</label><input class="in" id="p_ends" type="datetime-local" value="${cairoInput(v.ends_at)}"></div></div>
+        <div class="fld"><label for="p_priority">Priority</label><input class="in" id="p_priority" type="number" min="-100" max="100" step="1" inputmode="numeric" value="${v.priority}" style="max-width:120px"><small>When several pop-ups fit a page, the highest number shows.</small></div>
+        <label class="tg"><input type="checkbox" id="p_active" ${v.active ? 'checked' : ''}> Show on the store</label>
+      </div>
+      <div class="dr-foot"><button type="button" class="btn ln" id="p_preview">Preview</button><button type="button" class="btn ln" data-close>Cancel</button><button class="btn" id="p_save">${isNew ? 'Create pop-up' : 'Save changes'}</button></div></form>`, { guard: true });
+
+    const val = id => $(`#${id}`, dr).value.trim();
+    const images = { image: v.image || '', image_ar: v.image_ar || '' };
+    const showImg = k => { $(`#p_${k}_pv`, dr).innerHTML = images[k] ? `<img src="${esc(images[k])}" alt="">` : '<span class="note">None</span>'; $(`[data-rmimg="${k}"]`, dr).hidden = !images[k]; };
+    ['image', 'image_ar'].forEach(k => {
+      showImg(k);
+      $(`[data-rmimg="${k}"]`, dr).onclick = () => { images[k] = ''; showImg(k); drawer.dirty = true; };
+      $(`[data-up="${k}"]`, dr).onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) db.upload(f).then(u => { images[k] = u; showImg(k); drawer.dirty = true; }).catch(fail); };
+    });
+    const sync = () => {
+      const kind = $('input[name="p_kind"]:checked', dr).value, trig = val('p_trigger');
+      $('#p_btnBox .fld:last-child', dr).hidden = kind === 'newsletter';
+      $('#p_nlNote', dr).hidden = kind !== 'newsletter';
+      $('#p_tvBox', dr).hidden = trig === 'exit';
+      $('#p_tvLabel', dr).textContent = trig === 'scroll' ? '% of the page' : 'Seconds';
+      $('#p_fdBox', dr).hidden = val('p_frequency') !== 'days';
+    };
+    dr.addEventListener('change', sync); sync();
+
+    const collect = () => {
+      const kind = $('input[name="p_kind"]:checked', dr).value;
+      const body = {
+        id: isNew ? null : p.id, active: $('#p_active', dr).checked, kind, layout: $('input[name="p_layout"]:checked', dr).value,
+        title: val('p_title'), title_ar: val('p_title_ar'), body: val('p_body'), body_ar: val('p_body_ar'),
+        image: images.image, image_ar: images.image_ar, code: val('p_code').toUpperCase(),
+        button_label: val('p_button_label'), button_label_ar: val('p_button_label_ar'), button_link: kind === 'newsletter' ? '' : val('p_button_link'),
+        trigger: val('p_trigger'), trigger_value: Number(val('p_trigger_value') || 0), frequency: val('p_frequency'), frequency_days: Number(val('p_frequency_days') || 3),
+        pages: $$('input[name="p_pages"]:checked', dr).map(c => c.value), audience: val('p_audience'), device: val('p_device'),
+        starts_at: val('p_starts') || null, ends_at: val('p_ends') || null, priority: Number(val('p_priority') || 0),
+      };
+      if (!body.title) throw new Error('Give the pop-up a title');
+      if (!body.pages.length) throw new Error('Choose at least one page to show the pop-up on');
+      if (body.code && !/^[A-Z0-9_-]{1,30}$/.test(body.code)) throw new Error('The code can only have letters, numbers, - and _');
+      if (kind === 'offer' && body.button_label && !body.button_link) throw new Error('Add a link for the button, or leave the button text empty');
+      if (body.button_link && !AlolaHero.safeLink(body.button_link)) throw new Error('Links must start with https:// or be a page of this store, like shop.html');
+      return body;
+    };
+    const showErr = m => { const e = $('#ppe', dr); e.textContent = m; e.hidden = false; e.scrollIntoView({ block: 'center' }); };
+    $('#p_preview', dr).onclick = () => {
+      try {
+        const b = collect(), pageFile = { home: '', shop: 'shop.html', product: 'shop.html', account: 'account.html' }[b.pages[0]];
+        localStorage.setItem('alola_popup_preview', JSON.stringify(b));
+        window.open(`../${pageFile}?popup=preview`, '_blank', 'noopener');
+      } catch (e) { showErr(e.message); }
+    };
+    $('#ppf', dr).onsubmit = async e => {
+      e.preventDefault();
+      const btn = $('#p_save', dr); btn.disabled = true; $('#ppe', dr).hidden = true;
+      try {
+        await db.savePopup(collect());
+        toast(isNew ? 'Pop-up created' : 'Pop-up saved');
+        closeDrawer();
+        viewPopups($('#view'), viewToken);
+      } catch (ex) { if (!ex.handled) showErr(ex.message); btn.disabled = false; }
+    };
+  }
+
+  const VIEWS = { overview: viewOverview, analytics: viewAnalytics, orders: viewOrders, products: viewProducts, customers: viewCustomers, discounts: viewDiscounts, home: viewHome, popups: viewPopups, themes: viewThemes };
 
   // ------------------------------------------------------------ start
   let hashBound = false;

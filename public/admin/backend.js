@@ -148,6 +148,13 @@ window.AdminDB = (function () {
     signIn, signOut, hasAdminSession,
     analytics: () => rpc('admin_analytics'),
     marketing: days => rpc('admin_marketing', { p_days: days }),
+    popups: () => rpc('admin_list_popups'),
+    savePopup: p => rpc('admin_save_popup', { p }),
+    setPopupActive: (id, active) => rpc('admin_set_popup_active', { p_id: id, p_active: active }),
+    deletePopup: async id => {
+      const { error } = await sb.from('popups').delete().eq('id', id);
+      check(error);
+    },
     customersExport: () => rpc('admin_customers_export'),
     orders: ({ q = '', status = '', page = 1 } = {}) => rpc('admin_list_orders', { p_q: q, p_status: status, p_page: page }),
     order: id => rpc('admin_get_order', { p_id: id }),

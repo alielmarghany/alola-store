@@ -556,6 +556,46 @@ test('analytics: visits are tracked anonymously and reported to admins only', as
   await db.query('delete from events');
 });
 
+test('pop-ups: admins set them up, shoppers see only live ones, views and clicks are counted', async () => {
+  await db.query('delete from order_attempts');
+  const base = { title: 'Eid sale', title_ar: 'عرض العيد', body: '20% off everything', code: 'eid20', button_label: 'Shop now', button_link: 'shop.html',
+    pages: ['home', 'shop', 'home'], trigger: 'scroll', trigger_value: 40, frequency: 'days', frequency_days: 2, layout: 'corner', active: true };
+  await assert.rejects(stranger('select admin_save_popup($1::jsonb)', [JSON.stringify(base)]), /Not authorised/);
+  await assert.rejects(anon('select admin_save_popup($1::jsonb)', [JSON.stringify(base)]), /permission denied/);
+  const live = (await one(admin('select admin_save_popup($1::jsonb) r', [JSON.stringify(base)]))).r;
+  assert.equal(live.code, 'EID20');
+  assert.deepEqual(live.pages.sort(), ['home', 'shop']);
+  assert.equal(live.layout, 'corner');
+  // Scheduled for next year (Cairo time), and switched off: shoppers see neither.
+  const later = (await one(admin('select admin_save_popup($1::jsonb) r', [JSON.stringify({ ...base, title: 'Later', starts_at: '2099-01-01T10:00' })]))).r;
+  assert.equal(new Date(later.starts_at).toISOString(), '2099-01-01T08:00:00.000Z');
+  const off = (await one(admin('select admin_save_popup($1::jsonb) r', [JSON.stringify({ ...base, title: 'Off', active: false })]))).r;
+  assert.deepEqual((await anon('select id from popups order by id')).map(r => Number(r.id)), [Number(live.id)]);
+  assert.equal((await admin('select id from popups')).length, 3);
+  // Refused: unsafe links and pictures, a button with no link, no pages, an end before the start.
+  for (const bad of [{ button_link: 'javascript:alert(1)' }, { image: 'http://x.example/a.png' }, { button_link: '' }, { pages: [] }, { pages: ['checkout'] },
+    { starts_at: '2030-01-02T00:00', ends_at: '2030-01-01T00:00' }, { title: '' }, { code: 'no spaces allowed' }]) {
+    await assert.rejects(admin('select admin_save_popup($1::jsonb)', [JSON.stringify({ ...base, ...bad })]), /./, JSON.stringify(bad));
+  }
+  // Editing keeps the id; turning on and off works.
+  const edited = (await one(admin('select admin_save_popup($1::jsonb) r', [JSON.stringify({ ...base, id: off.id, title: 'Off, edited' })]))).r;
+  assert.equal(edited.id, off.id); assert.equal(edited.active, true);
+  await admin('select admin_set_popup_active($1, false)', [off.id]);
+  // Views and clicks.
+  const v = { visitor: 'visitor0009', session: 'session0009' };
+  await anon('select track($1::jsonb)', [JSON.stringify({ ...v, type: 'popup_view', popup_id: Number(live.id) })]);
+  await anon('select track($1::jsonb)', [JSON.stringify({ ...v, type: 'popup_click', popup_id: Number(live.id) })]);
+  await anon('select track($1::jsonb)', [JSON.stringify({ ...v, type: 'popup_view', popup_id: 999999 })]); // no such pop-up: ignored
+  const list = (await one(admin('select admin_list_popups() r'))).r;
+  const row = list.find(x => x.id === live.id);
+  assert.equal(row.views, 1); assert.equal(row.clicks, 1); assert.equal(row.live, true);
+  assert.equal(list.find(x => x.id === later.id).live, false);
+  await assert.rejects(stranger('select admin_list_popups()'), /Not authorised/);
+  assert.equal((await stranger('delete from popups where id = $1 returning id', [live.id])).length, 0);
+  assert.equal((await admin('delete from popups returning id')).length, 3);
+  await db.query('delete from events');
+});
+
 test('clearing sample data leaves real clients and products', async () => {
   await db.exec(sql('clear-sample-data.sql'));
   assert.equal((await db.query("select * from customers where email like '%@example.com'")).rows.length, 0);
