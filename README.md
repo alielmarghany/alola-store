@@ -14,6 +14,7 @@ A cosmetics store and admin dashboard. The site is static files hosted on **GitH
 
 **Dashboard (`/admin/`):**
 - Revenue per day and per month, orders, number of clients, top products and low stock
+- Analytics for ads: visitors, conversion rate, revenue per visit, the shopping funnel, where visitors come from (Facebook, Instagram, TikTok, Google, ad campaigns), products with many views but few sales, searches with no results, governorates, devices, language, best hours to post, new vs returning clients and discount codes. Includes an ad link builder (UTM links) and CSV downloads of clients for custom audiences. Visits are tracked anonymously by `public/js/track.js`: a random id per browser, no names, emails or IP addresses
 - Orders: search, view details and change status
 - Products: add, edit, hide or delete, with photo upload
 - Update from sheet: upload the item sheet exported from the shop's stock system (Excel, CSV or PDF). Products are matched by product code (كود الصنف), and their price (سعر البيع) and stock (الرصيد or الكمية) are updated after you check a preview of every change

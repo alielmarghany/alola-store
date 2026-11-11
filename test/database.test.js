@@ -496,6 +496,66 @@ test('brand logos: everyone can see them, only admins can change them', async ()
   assert.equal((await admin("delete from brand_logos where brand = 'Anua' returning brand")).length, 1);
 });
 
+test('analytics: visits are tracked anonymously and reported to admins only', async () => {
+  await db.query('delete from order_attempts');
+  await db.query('delete from events');
+  const pid = Number((await one(anon('select id from products where stock > 3 order by id limit 1'))).id);
+  const track = p => anon('select track($1::jsonb)', [JSON.stringify(p)]);
+  const fb = { visitor: 'visitor0001', session: 'session0001', source: 'facebook', medium: 'cpc', campaign: 'eid-sale', device: 'mobile', lang: 'ar' };
+  const direct = { visitor: 'visitor0002', session: 'session0002', device: 'desktop' };
+  await track({ ...fb, type: 'page_view', path: 'index.html' });
+  await track({ ...fb, type: 'product_view', product_id: pid });
+  await track({ ...fb, type: 'add_to_cart', product_id: pid, qty: 2 });
+  await track({ ...fb, type: 'checkout_start' });
+  const placed = await order({ items: [{ id: pid, qty: 1 }] });
+  await track({ ...fb, type: 'purchase', order: placed.number, value: 999999 }); // the browser's value is ignored
+  await track({ ...fb, type: 'purchase', order: placed.number }); // counted once
+  await track({ ...fb, type: 'purchase', order: 'ALO-99999' }); // not a real order
+  await track({ ...direct, type: 'page_view', path: 'shop.html', referrer: 'www.google.com' });
+  await track({ ...direct, type: 'search', query: '  Sunscreen ', results: 0 });
+  // Junk is ignored without an error.
+  for (const bad of [{ type: 'hack', visitor: 'x', session: 'y' }, { ...direct, type: 'page_view', visitor: 'NOT valid!' }, null, []]) await track(bad);
+  await assert.rejects(anon('select * from events'), /permission denied/);
+  const ev = (await db.query('select type, value, query, source, medium from events order by id')).rows;
+  assert.equal(ev.length, 7);
+  assert.equal(ev.find(e => e.type === 'purchase').value, placed.total);
+  assert.equal(ev.find(e => e.type === 'search').query, 'sunscreen');
+
+  await assert.rejects(stranger('select admin_marketing(30)'), /Not authorised/);
+  await assert.rejects(anon('select admin_marketing(30)'), /permission denied/);
+  const r = (await one(admin('select admin_marketing(30) r'))).r;
+  assert.equal(r.current.visitors, 2);
+  assert.equal(r.current.sessions, 2);
+  assert.equal(r.current.purchaseSessions, 1);
+  assert.deepEqual(r.funnel.map(f => f.n), [2, 1, 1, 1, 1]);
+  const chans = Object.fromEntries(r.channels.map(c => [c.name, c]));
+  assert.equal(chans['Facebook Ads'].orders, 1);
+  assert.equal(chans['Facebook Ads'].revenue, placed.total);
+  assert.equal(chans.Google.sessions, 1);
+  assert.equal(r.campaigns[0].name, 'eid-sale');
+  assert.deepEqual(r.devices.map(d => d.name).sort(), ['desktop', 'mobile']);
+  assert.equal(r.languages.find(l => l.name === 'Arabic').orders, 1);
+  const prod = r.products.find(p => p.id === pid);
+  assert.equal(prod.views, 1); assert.equal(prod.carts, 2); assert.ok(prod.sold >= 1);
+  assert.deepEqual(r.searches[0], { query: 'sunscreen', n: 1, min_results: 0, max_results: 0 });
+  assert.equal(r.daily.length, 30);
+  assert.equal(r.heatOrders.length, 168); assert.equal(r.heatVisits.length, 168);
+  assert.ok(r.cities.length >= 1);
+  assert.ok(r.customers.buyers >= 1);
+  const exp = (await one(admin('select admin_customers_export() r'))).r;
+  assert.ok(exp.length >= 1 && 'phone' in exp[0] && 'spent' in exp[0]);
+  await assert.rejects(stranger('select admin_customers_export()'), /Not authorised/);
+  // Where visits come from.
+  const ch = async (s, m, ref) => (await one(anon('select channel_of($1, $2, $3) c', [s, m, ref])).catch(() => db.query('select channel_of($1, $2, $3) c', [s, m, ref]).then(x => x.rows[0]))).c;
+  assert.equal(await ch('ig', 'paid_social', ''), 'Instagram Ads');
+  assert.equal(await ch('', '', 'l.instagram.com'), 'Instagram');
+  assert.equal(await ch('', '', 'lm.facebook.com'), 'Facebook');
+  assert.equal(await ch('', '', ''), 'Direct');
+  assert.equal(await ch('tiktok', 'cpc', ''), 'TikTok Ads');
+  assert.equal(await ch('', '', 'example.org'), 'Other sites');
+  await db.query('delete from events');
+});
+
 test('clearing sample data leaves real clients and products', async () => {
   await db.exec(sql('clear-sample-data.sql'));
   assert.equal((await db.query("select * from customers where email like '%@example.com'")).rows.length, 0);

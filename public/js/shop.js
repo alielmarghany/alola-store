@@ -80,6 +80,7 @@
   $('#fRating').parentElement.hidden = !products.some(p => p.rating); // nothing to filter until products have ratings
 
   let firstRender = true;
+  let searchTimer, lastSearch = '';
   function render() {
     // Facets, with counts reflecting the other active filters
     $('#fCat').innerHTML = [['', 'All'], ...CATS.map(c => [c, c])].map(([v, l]) => {
@@ -102,6 +103,9 @@
     const list = products.filter(p => match(p)).sort(SORTS[F.sort]);
     const label = `${list.length} product${list.length === 1 ? '' : 's'}`;
     $('#count').textContent = label;
+    clearTimeout(searchTimer);
+    const q = F.q.trim();
+    if (q.length >= 2 && q !== lastSearch) searchTimer = setTimeout(() => { lastSearch = q; window.AlolaTrack?.send('search', { query: q, results: list.length }); }, 1500);
     $('#filtersApply').textContent = `Show ${label}`;
     $('#grid').innerHTML = list.length ? list.map(card).join('')
       : `<div class="empty"><h3>No products match</h3><p>Try removing a filter or searching for something else.</p><p style="margin-top:14px"><button class="btn dk" data-clear>Clear all filters</button></p></div>`;

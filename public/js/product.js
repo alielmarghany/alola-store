@@ -11,6 +11,7 @@
   const p = products.find(x => x.id === id);
   if (!p) return notFound();
   document.title = `${A.pname(p)} | ${T.ar ? 'العلا' : 'Alola'}`;
+  window.AlolaTrack?.send('product_view', { product_id: p.id });
   const description = A.loc(p, 'description'), howTo = A.loc(p, 'how_to');
 
   const related = products.filter(x => x.id !== p.id).sort((a, b) => (b.category === p.category) - (a.category === p.category)).slice(0, 4);

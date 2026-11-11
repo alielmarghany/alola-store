@@ -147,6 +147,8 @@ window.AdminDB = (function () {
     setUnauthorizedHandler: fn => { onUnauthorized = fn; },
     signIn, signOut, hasAdminSession,
     analytics: () => rpc('admin_analytics'),
+    marketing: days => rpc('admin_marketing', { p_days: days }),
+    customersExport: () => rpc('admin_customers_export'),
     orders: ({ q = '', status = '', page = 1 } = {}) => rpc('admin_list_orders', { p_q: q, p_status: status, p_page: page }),
     order: id => rpc('admin_get_order', { p_id: id }),
     setOrderStatus: (id, status) => rpc('admin_set_order_status', { p_id: id, p_status: status }),

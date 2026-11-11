@@ -31,6 +31,7 @@
     products: SVG('<path d="M9 3h6v4H9zM7 7h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/>'),
     customers: SVG('<circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M16 4a4 4 0 0 1 0 8M22 21c0-3-1.500-5-4-5.700"/>'),
     discounts: SVG('<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9zM8 8v.01M15.500 8.500l-7 7"/>'),
+    analytics: SVG('<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>'),
     home: SVG('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 13h5M8 16h8"/>'),
     themes: SVG('<path d="M12 3a9 9 0 1 0 0 18c1.500 0 2-1 2-2 0-1.500-1-2-1-3 0-1 1-2 2-2h2a4 4 0 0 0 4-4c0-4-4-7-9-7z"/><circle cx="7.500" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/>'),
     store: SVG('<path d="M3 10v10h18V10M2 10l2-6h16l2 6zM9 20v-6h6v6"/>'),
@@ -76,7 +77,7 @@
   }
 
   // ------------------------------------------------------------ shell + routing
-  const NAV = [['overview', 'Overview'], ['orders', 'Orders'], ['products', 'Products'], ['customers', 'Customers'], ['discounts', 'Discounts'], ['home', 'Home page'], ['themes', 'Themes']];
+  const NAV = [['overview', 'Overview'], ['analytics', 'Analytics'], ['orders', 'Orders'], ['products', 'Products'], ['customers', 'Customers'], ['discounts', 'Discounts'], ['home', 'Home page'], ['themes', 'Themes']];
   const notif = { unread: 0, rows: [], pop: false };
 
   function renderShell() {
@@ -357,6 +358,267 @@
       const cx = L + slot * i + slot / 2, half = tip.offsetWidth / 2;
       tip.style.left = Math.min(W - half, Math.max(half, cx)) + 'px';
       tip.style.top = Math.max(tip.offsetHeight + 2, y(x.revenue) - 8) + 'px';
+    };
+    $$('.slot', box).forEach(g => { g.onmouseenter = () => show(g); g.onclick = () => show(g); });
+    chart.onmouseleave = () => { tip.hidden = true; };
+  }
+
+  // ------------------------------------------------------------ analytics (for ads and marketing decisions)
+  const anState = { days: load('alola_admin_an_days', 30), metric: 'visitors', heat: 'heatOrders', table: false };
+  const pct = (a, b) => b > 0 ? a / b * 100 : 0;
+  const pctTxt = v => `${v >= 10 ? Math.round(v) : (Math.round(v * 10) / 10)}%`;
+  /** Change vs the previous period, as text so it never relies on colour alone. */
+  function delta(cur, prev, lowerIsBetter) {
+    if (!prev) return cur ? '<span class="dl up">New</span>' : '<span class="dl">No change</span>';
+    const d = (cur - prev) / prev * 100, good = lowerIsBetter ? d < 0 : d > 0;
+    if (Math.abs(d) < .5) return '<span class="dl">No change</span>';
+    return `<span class="dl ${good ? 'up' : 'down'}">${d > 0 ? '▲ +' : '▼ '}${pctTxt(Math.abs(d))}</span>`;
+  }
+  const DAYS_SAT = [5, 6, 0, 1, 2, 3, 4]; // Egypt's week starts on Saturday; data rows are Monday-first
+  const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const hourName = h => `${h % 12 || 12}${h < 12 ? 'am' : 'pm'}`;
+  /** A CSV file the admin can open in Excel. The BOM keeps Arabic text readable there. */
+  function downloadCsv(name, rows) {
+    const cell = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const blob = new Blob(['﻿' + rows.map(r => r.map(cell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  /** Egyptian mobile numbers in the international form ad platforms ask for: 01xxxxxxxxx becomes +201xxxxxxxxx. */
+  const intlPhone = p => { const d = String(p || '').replace(/[^\d+]/g, ''); return /^01\d{9}$/.test(d) ? '+2' + d : /^201\d{9}$/.test(d) ? '+' + d : d; };
+  /** A ranked table with a share bar: one hue, magnitude only. */
+  function shareTable(rows, cols, { empty = 'No data yet', key = 'sessions' } = {}) {
+    if (!rows.length) return `<div class="empty" style="padding:26px 10px">${empty}</div>`;
+    const max = Math.max(1, ...rows.map(r => r[key] || 0));
+    return `<div class="tbl-wrap flat"><table><thead><tr>${cols.map(c => `<th${c.r ? ' class="r"' : ''}>${c.h}</th>`).join('')}</tr></thead><tbody>
+      ${rows.map(r => `<tr>${cols.map((c, i) => `<td${c.r ? ' class="r num nowrap"' : ''}>${i === 0 ? `<div class="sh-name">${c.v(r)}</div><div class="sh-bar"><i style="width:${(r[key] || 0) / max * 100}%"></i></div>` : c.v(r)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  }
+
+  async function viewAnalytics(el, token) {
+    el.innerHTML = '<div class="kpis"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div><div class="skeleton" style="height:340px"></div>';
+    let a;
+    try { a = await db.marketing(anState.days); } catch (e) { return fail(e); }
+    if (token !== viewToken) return;
+    const c = a.current, p = a.previous;
+    const conv = pct(c.purchaseSessions || c.orders, c.sessions), convPrev = pct(p.purchaseSessions || p.orders, p.sessions);
+    const cartRate = pct(c.cartSessions, c.sessions), cartPrev = pct(p.cartSessions, p.sessions);
+    const aband = c.checkoutSessions ? 100 - pct(c.purchaseSessions, c.checkoutSessions) : 0, abandPrev = p.checkoutSessions ? 100 - pct(p.purchaseSessions, p.checkoutSessions) : 0;
+    const notrack = load('alola_notrack', null) === 1 || (() => { try { return localStorage.getItem('alola_notrack') === '1'; } catch { return false; } })();
+    const since = a.trackingSince ? day(a.trackingSince) : null;
+    const tile = (label, value, d, sub, cls = '') => `<div class="kpi ${cls}"><div class="l">${label}</div><div class="v num">${value}</div><div class="s">${d} ${sub ? `<span>· ${sub}</span>` : ''}</div></div>`;
+    const prodRows = a.products.slice(0, 25);
+    const avgRate = pct(a.products.reduce((s, x) => s + x.sold, 0), a.products.reduce((s, x) => s + x.views, 0));
+    const heatMax = k => Math.max(1, ...a[k]);
+
+    el.innerHTML = `<div class="bar an-bar">
+        <div class="seg" role="group" aria-label="Period">${[[7, '7 days'], [30, '30 days'], [90, '90 days'], [365, '12 months']].map(([d, l]) => `<button data-days="${d}" aria-pressed="${anState.days === d}" class="${anState.days === d ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <div style="flex:1"></div>
+        <button class="btn ln" id="anExpCust">${I.customers} Customers for ads (CSV)</button>
+        <button class="btn ln" id="anExpProd">${I.products} Products report (CSV)</button>
+      </div>
+      <p class="note an-note">${since ? `Visit tracking started on <b>${since}</b>. Orders and revenue include every order.` : 'No visits recorded yet. Visits are counted from now on; orders and revenue already include every order.'}
+        Compared with the ${a.days} days before. <label class="tg" style="display:inline-flex;padding:0;margin-left:6px"><input type="checkbox" id="anNoTrack" ${notrack ? 'checked' : ''}> Don’t count my own visits on this browser</label></p>
+      <div class="kpis an-kpis">
+        ${tile('Visitors', c.visitors.toLocaleString(), delta(c.visitors, p.visitors), `${c.sessions.toLocaleString()} visits`, 'a')}
+        ${tile('Conversion rate', pctTxt(conv), delta(conv, convPrev), 'visits that ordered')}
+        ${tile('Orders', c.orders.toLocaleString(), delta(c.orders, p.orders), `revenue ${fmt(c.revenue)}`)}
+        ${tile('Average order', fmt(c.aov), delta(c.aov, p.aov))}
+        ${tile('Revenue per visit', fmt(c.sessions ? Math.round(c.revenue / c.sessions) : 0), delta(c.sessions ? c.revenue / c.sessions : 0, p.sessions ? p.revenue / p.sessions : 0), 'use as your max cost per click')}
+        ${tile('Add-to-cart rate', pctTxt(cartRate), delta(cartRate, cartPrev), 'visits that added a product')}
+        ${tile('Checkout drop-off', pctTxt(aband), delta(aband, abandPrev, true), 'started checkout, didn’t order')}
+        ${tile('Product views', c.productViews.toLocaleString(), delta(c.productViews, p.productViews), `${c.pageViews.toLocaleString()} pages viewed`)}
+      </div>
+
+      <div class="card an-card"><div class="ch-h"><div><h2 id="anTitle"></h2><div class="ch-total" id="anTotal"></div></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div class="seg" role="group" aria-label="Measure">${[['visitors', 'Visitors'], ['orders', 'Orders'], ['revenue', 'Revenue']].map(([k, l]) => `<button data-metric="${k}" aria-pressed="${anState.metric === k}" class="${anState.metric === k ? 'on' : ''}">${l}</button>`).join('')}</div><button class="linkbtn" id="anView">${anState.table ? 'View chart' : 'View table'}</button></div></div>
+        <div id="anChart"></div></div>
+
+      <div class="an-g">
+        <div class="card"><h2>Shopping funnel</h2><p class="note">How far visits get. The biggest drop is where to improve first.</p>
+          <div class="funnel">${a.funnel.map((f, i) => { const prev = i ? a.funnel[i - 1].n : f.n, base = a.funnel[0].n;
+            return `<div class="fn-row"><div class="fn-l"><b>${f.step}</b><span class="num">${f.n.toLocaleString()}</span></div>
+              <div class="fn-bar"><i style="width:${pct(f.n, base)}%"></i></div>
+              <div class="fn-r num">${i ? `${pctTxt(pct(f.n, prev))} of previous step` : '100%'}</div></div>`; }).join('')}</div></div>
+        <div class="card"><h2>Where visitors come from</h2><p class="note">Ad links made with the link builder below show here by name, e.g. “Facebook Ads”.</p>
+          ${shareTable(a.channels, [
+            { h: 'Source', v: r => esc(r.name) }, { h: 'Visits', r: 1, v: r => r.sessions.toLocaleString() },
+            { h: 'Orders', r: 1, v: r => r.orders }, { h: 'Conv.', r: 1, v: r => pctTxt(pct(r.orders, r.sessions)) }, { h: 'Revenue', r: 1, v: r => fmt(r.revenue) }],
+            { empty: 'No visits recorded yet' })}</div>
+      </div>
+
+      <div class="an-g">
+        <div class="card"><h2>Ad campaigns</h2><p class="note">Every link with a campaign name, and what it brought in.</p>
+          ${shareTable(a.campaigns, [
+            { h: 'Campaign', v: r => `${esc(r.name)}<small>${esc(r.channel)}</small>` }, { h: 'Visits', r: 1, v: r => r.sessions.toLocaleString() },
+            { h: 'Orders', r: 1, v: r => r.orders }, { h: 'Revenue', r: 1, v: r => fmt(r.revenue) }, { h: 'Per visit', r: 1, v: r => fmt(r.sessions ? Math.round(r.revenue / r.sessions) : 0) }],
+            { empty: 'No campaign links used yet. Build one with the ad link builder.' })}</div>
+        <div class="card" id="utm"><h2>Ad link builder</h2><p class="note">Use these links in your ads and posts so every visit and order is credited to the right ad.</p>
+          <div class="f2"><div class="fld"><label for="u_page">Page</label><select class="in" id="u_page">
+              <option value="">Home page</option><option value="shop.html">All products</option>
+              ${['Skincare', 'Hair', 'Makeup', 'Fragrance'].map(x => `<option value="shop.html?category=${x}">Category: ${x}</option>`).join('')}
+              ${[...new Set(a.products.map(x => x.brand).concat(productsState.rows.map(x => x.brand)))].sort().map(b => `<option value="shop.html?brand=${encodeURIComponent(b)}">Brand: ${esc(b)}</option>`).join('')}
+              <option value="custom">Another page (paste its link)…</option></select></div>
+            <div class="fld"><label for="u_src">Where the ad runs</label><select class="in" id="u_src">${[['facebook', 'Facebook'], ['instagram', 'Instagram'], ['tiktok', 'TikTok'], ['google', 'Google'], ['snapchat', 'Snapchat'], ['whatsapp', 'WhatsApp'], ['email', 'Email'], ['influencer', 'Influencer']].map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></div></div>
+          <div class="fld" id="u_customRow" hidden><label for="u_custom">Page link</label><input class="in" id="u_custom" inputmode="url" spellcheck="false" placeholder="https://alielmarghany.github.io/alola-store/product.html?id=22"></div>
+          <div class="f2"><div class="fld"><label for="u_med">Type</label><select class="in" id="u_med"><option value="cpc">Paid ad</option><option value="social">Free post or story</option><option value="message">Message or chat</option><option value="influencer">Influencer post</option></select></div>
+            <div class="fld"><label for="u_camp">Campaign name</label><input class="in" id="u_camp" maxlength="60" autocomplete="off" spellcheck="false" placeholder="eid-sale-2026"></div></div>
+          <div class="fld"><label for="u_out">Your link</label><div class="u-out"><input class="in" id="u_out" readonly><button class="btn" id="u_copy" type="button">Copy</button></div></div></div>
+      </div>
+
+      <div class="card an-card"><div class="ch-h"><div><h2>Products: interest vs sales</h2><p class="note" style="margin:2px 0 0">Many views but few sales usually means the price, photos or description need work. Many sales: a good product to advertise.</p></div></div>
+        ${prodRows.length ? `<div class="tbl-wrap flat"><table><thead><tr><th>Product</th><th class="r">Views</th><th class="r">Added to cart</th><th class="r">Sold</th><th class="r">Revenue</th><th class="r hide-m">Views → sold</th><th class="hide-m">Note</th></tr></thead><tbody>
+          ${prodRows.map(x => { const rate = pct(x.sold, x.views);
+            // Judged against this store's own average, not a fixed number.
+            const note = (x.views >= 10 && x.sold === 0) || (x.views >= 30 && rate < avgRate / 3) ? '<span class="st st-low">Many views, few sales</span>'
+              : x.sold >= 3 && rate >= avgRate ? '<span class="st st-live">Good to advertise</span>' : '';
+            return `<tr><td><b>${esc(x.name)}</b><small>${x.code ? `Code ${esc(x.code)} · ` : ''}${esc(x.brand)}</small></td><td class="r num">${x.views.toLocaleString()}</td><td class="r num">${x.carts.toLocaleString()}</td><td class="r num">${x.sold.toLocaleString()}</td><td class="r num nowrap">${fmt(x.revenue)}</td><td class="r num hide-m">${x.views ? pctTxt(rate) : '–'}</td><td class="hide-m">${note}</td></tr>`; }).join('')}</tbody></table></div>`
+          : '<div class="empty" style="padding:26px 10px">No product views or sales in this period yet</div>'}</div>
+
+      <div class="an-g">
+        <div class="card"><h2>Governorates</h2><p class="note">Where orders go. Target ads at the strongest areas, or test the weak ones.</p>
+          ${shareTable(a.cities, [{ h: 'Governorate', v: r => esc(r.name) }, { h: 'Orders', r: 1, v: r => r.orders }, { h: 'Clients', r: 1, v: r => r.customers }, { h: 'Revenue', r: 1, v: r => fmt(r.revenue) }],
+            { key: 'revenue', empty: 'No orders in this period' })}</div>
+        <div class="card"><h2>What people search for</h2><p class="note">“No results” means people want something you don’t stock or can’t find. Consider adding it.</p>
+          ${shareTable(a.searches, [{ h: 'Search', v: r => `“${esc(r.query)}”` }, { h: 'Times', r: 1, v: r => r.n }, { h: 'Results', r: 1, v: r => r.max_results === 0 ? '<span class="st st-out">No results</span>' : r.max_results ?? '–' }],
+            { key: 'n', empty: 'No searches yet' })}</div>
+      </div>
+
+      <div class="an-g">
+        <div class="card"><div class="ch-h"><div><h2>Best times</h2><p class="note" style="margin:2px 0 0">Schedule ads and posts for the busiest hours (Cairo time).</p></div>
+          <div class="seg" role="group" aria-label="Show">${[['heatOrders', 'Orders'], ['heatVisits', 'Visits']].map(([k, l]) => `<button data-heat="${k}" aria-pressed="${anState.heat === k}" class="${anState.heat === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+          <div id="anHeat"></div></div>
+        <div style="display:grid;gap:14px;align-content:start">
+          <div class="card"><h2>Devices</h2>${shareTable(a.devices, [{ h: 'Device', v: r => cap(r.name) }, { h: 'Visits', r: 1, v: r => r.sessions.toLocaleString() }, { h: 'Conv.', r: 1, v: r => pctTxt(pct(r.orders, r.sessions)) }], { empty: 'No visits yet' })}</div>
+          <div class="card"><h2>Store language</h2>${shareTable(a.languages, [{ h: 'Language', v: r => r.name }, { h: 'Visits', r: 1, v: r => r.sessions.toLocaleString() }, { h: 'Orders', r: 1, v: r => r.orders }], { empty: 'No visits yet' })}</div>
+        </div>
+      </div>
+
+      <div class="an-g">
+        <div class="card"><h2>Customers</h2>
+          <div class="mini-kpis"><div><b class="num">${a.customers.buyers}</b><span>bought in this period</span></div><div><b class="num">${a.customers.new}</b><span>first-time buyers</span></div>
+            <div><b class="num">${a.customers.returning}</b><span>came back to buy again</span></div><div><b class="num">${a.customers.repeatRateAllTime}%</b><span>of all clients ordered twice or more</span></div></div>
+          ${a.customers.top.length ? `<h3 class="an-h3">Top clients this period</h3><div class="rows">${a.customers.top.map(t => `<a class="rw" href="#/customers/${t.id}"><span>${esc(t.name)}<small>${esc(t.city)} · ${t.orders} order${t.orders === 1 ? '' : 's'}</small></span><b class="num nowrap">${fmt(t.spent)}</b></a>`).join('')}</div>` : ''}
+          <p class="note" style="margin-top:12px">Tip: “Customers for ads” downloads every client’s phone and email. Upload it to Meta or TikTok Ads as a custom audience to reach them again or to find similar people (lookalike audience).</p></div>
+        <div class="card"><h2>Discount codes</h2><p class="note">Which codes brought orders in this period.</p>
+          ${shareTable(a.discounts, [{ h: 'Code', v: r => `<b>${esc(r.code)}</b>` }, { h: 'Orders', r: 1, v: r => r.orders }, { h: 'Revenue', r: 1, v: r => fmt(r.revenue) }, { h: 'Discount given', r: 1, v: r => fmt(r.discount) }],
+            { key: 'orders', empty: 'No discount codes used in this period' })}</div>
+      </div>`;
+    $('#sub').textContent = `Last ${a.days === 365 ? '12 months' : `${a.days} days`}`;
+
+    // Period, measure and table switches.
+    $$('[data-days]', el).forEach(b => b.onclick = () => { anState.days = Number(b.dataset.days); save('alola_admin_an_days', anState.days); viewAnalytics(el, ++viewToken); });
+    const drawDaily = () => {
+      const m = anState.metric, rows = a.daily, total = rows.reduce((s, x) => s + x[m], 0);
+      const names = { visitors: 'Visitors per day', orders: 'Orders per day', revenue: 'Revenue per day' };
+      $('#anTitle').textContent = names[m];
+      $('#anTotal').innerHTML = `<span class="num">${m === 'revenue' ? fmt(total) : total.toLocaleString()}</span><small>${m === 'visitors' ? 'visits by day, people counted once per day' : 'cancelled orders not counted'}</small>`;
+      const box = $('#anChart');
+      if (anState.table) {
+        box.innerHTML = `<div class="ch-tbl"><table><thead><tr><th>Day</th><th class="r">Visitors</th><th class="r">Orders</th><th class="r">Revenue</th></tr></thead><tbody>${[...rows].reverse().map(x => `<tr><td>${pointLabel(x.key, true)}</td><td class="r num">${x.visitors}</td><td class="r num">${x.orders}</td><td class="r num">${fmt(x.revenue)}</td></tr>`).join('')}</tbody></table></div>`;
+        return;
+      }
+      barSeries(box, rows, m, v => m === 'revenue' ? fmt(v) : v.toLocaleString(), x => `${pointLabel(x.key, true)} · ${x.visitors} visitor${x.visitors === 1 ? '' : 's'}, ${x.orders} order${x.orders === 1 ? '' : 's'}`);
+    };
+    drawDaily();
+    $$('[data-metric]', el).forEach(b => b.onclick = () => {
+      anState.metric = b.dataset.metric;
+      $$('[data-metric]', el).forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
+      drawDaily();
+    });
+    $('#anView').onclick = e => { anState.table = !anState.table; e.target.textContent = anState.table ? 'View chart' : 'View table'; drawDaily(); };
+    new ResizeObserver(() => { if (!anState.table && $('#anChart')) drawDaily(); }).observe($('#anChart'));
+
+    // Best times: a week of hours, darker = busier. One hue, light to dark.
+    const drawHeat = () => {
+      const k = anState.heat, max = heatMax(k), data = a[k], what = k === 'heatOrders' ? 'order' : 'visit';
+      const step = v => v === 0 ? 0 : Math.min(5, Math.ceil(v / max * 5));
+      $('#anHeat').innerHTML = `<div class="heat" role="table" aria-label="${what === 'order' ? 'Orders' : 'Visits'} by day and hour">
+        <div class="hx" role="row"><span></span>${Array.from({ length: 24 }, (_, h) => `<span role="columnheader">${h % 3 === 0 ? hourName(h) : ''}</span>`).join('')}</div>
+        ${DAYS_SAT.map(dw => `<div class="hr" role="row"><span role="rowheader">${DAY_NAMES[dw].slice(0, 3)}</span>${Array.from({ length: 24 }, (_, h) => { const v = data[dw * 24 + h];
+          return `<i role="cell" class="h${step(v)}" tabindex="-1" data-tip="${DAY_NAMES[dw]} ${hourName(h)}–${hourName((h + 1) % 24)}: ${v} ${what}${v === 1 ? '' : 's'}"></i>`; }).join('')}</div>`).join('')}
+        <div class="h-legend"><span>Fewer</span>${[0, 1, 2, 3, 4, 5].map(s => `<i class="h${s}"></i>`).join('')}<span>More</span></div></div><div class="tip" hidden></div>`;
+      const tip = $('#anHeat .tip'), wrap = $('#anHeat');
+      $$('#anHeat [data-tip]').forEach(cell => cell.onmouseenter = () => {
+        tip.textContent = cell.dataset.tip; tip.hidden = false;
+        const r = cell.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+        tip.style.left = Math.min(w.width - tip.offsetWidth / 2, Math.max(tip.offsetWidth / 2, r.left - w.left + r.width / 2)) + 'px';
+        tip.style.top = (r.top - w.top - 4) + 'px';
+      });
+      wrap.onmouseleave = () => { tip.hidden = true; };
+    };
+    drawHeat();
+    $$('[data-heat]', el).forEach(b => b.onclick = () => {
+      anState.heat = b.dataset.heat;
+      $$('[data-heat]', el).forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
+      drawHeat();
+    });
+
+    // Ad link builder.
+    const site = new URL('../', location.href).href;
+    const buildLink = () => {
+      const pageV = $('#u_page').value;
+      $('#u_customRow').hidden = pageV !== 'custom';
+      let base = pageV === 'custom' ? $('#u_custom').value.trim() : site + pageV;
+      let url;
+      try { url = new URL(base || site); } catch { $('#u_out').value = 'Paste a full page link that starts with https://'; return; }
+      const camp = $('#u_camp').value.trim().toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g, '-').replace(/^-|-$/g, '');
+      url.searchParams.set('utm_source', $('#u_src').value);
+      url.searchParams.set('utm_medium', $('#u_med').value);
+      if (camp) url.searchParams.set('utm_campaign', camp); else url.searchParams.delete('utm_campaign');
+      $('#u_out').value = url.href;
+    };
+    ['u_page', 'u_src', 'u_med', 'u_camp', 'u_custom'].forEach(id => $(`#${id}`).addEventListener('input', buildLink));
+    buildLink();
+    $('#u_copy').onclick = async () => {
+      try { await navigator.clipboard.writeText($('#u_out').value); toast('Link copied'); }
+      catch { $('#u_out').select(); toast('Press Ctrl+C to copy the link'); }
+    };
+
+    // This browser is the admin's: leave it out of the numbers if they want.
+    $('#anNoTrack').onchange = e => {
+      try { e.target.checked ? localStorage.setItem('alola_notrack', '1') : localStorage.removeItem('alola_notrack'); } catch {}
+      toast(e.target.checked ? 'Your visits on this browser won’t be counted' : 'Your visits on this browser will be counted');
+    };
+
+    // Exports.
+    $('#anExpCust').onclick = async () => {
+      try {
+        const rows = await db.customersExport();
+        downloadCsv(`alola-customers-${new Date().toISOString().slice(0, 10)}.csv`, [
+          ['name', 'email', 'phone', 'city', 'country', 'orders', 'total_spent_egp', 'first_order', 'last_order'],
+          ...rows.map(r => [r.name, r.email, intlPhone(r.phone), r.city, 'EG', r.orders, r.spent, r.first_order ? r.first_order.slice(0, 10) : '', r.last_order ? r.last_order.slice(0, 10) : ''])]);
+        toast(`${rows.length} client${rows.length === 1 ? '' : 's'} downloaded`);
+      } catch (e) { fail(e); }
+    };
+    $('#anExpProd').onclick = () => downloadCsv(`alola-products-${a.days}d-${new Date().toISOString().slice(0, 10)}.csv`, [
+      ['code', 'product', 'brand', 'views', 'added_to_cart', 'sold', 'revenue_egp', 'views_to_sold_pct'],
+      ...a.products.map(x => [x.code || '', x.name, x.brand, x.views, x.carts, x.sold, x.revenue, x.views ? Math.round(pct(x.sold, x.views) * 10) / 10 : ''])]);
+  }
+  /** Single-series bar chart for the Analytics tab: same marks as the Overview chart. */
+  function barSeries(box, rows, key, fmtV, tipLine) {
+    const W = Math.max(280, box.clientWidth || 600), H = innerWidth <= 820 ? 220 : 250;
+    const L = 44, R = 4, T = 10, B = 24, iw = W - L - R, ih = H - T - B;
+    const { max, step } = niceScale(Math.max(...rows.map(x => x[key])));
+    const slot = iw / rows.length, bw = Math.max(1.5, Math.min(slot - 2, 30));
+    const y = v => T + ih - (v / max) * ih;
+    const ticks = Array.from({ length: Math.round(max / step) + 1 }, (_, i) => i * step);
+    const labelEvery = Math.max(1, Math.ceil(52 / slot));
+    const bars = rows.map((x, i) => {
+      const cx = L + slot * i + slot / 2, top = y(x[key]), h = T + ih - top, rad = Math.min(4, bw / 2, h);
+      const d = h > 0 ? `M${cx - bw / 2} ${T + ih}V${top + rad}Q${cx - bw / 2} ${top} ${cx - bw / 2 + rad} ${top}H${cx + bw / 2 - rad}Q${cx + bw / 2} ${top} ${cx + bw / 2} ${top + rad}V${T + ih}Z` : '';
+      return `<g class="slot" data-i="${i}"><rect class="hl" x="${L + slot * i}" y="${T}" width="${slot}" height="${ih}" rx="4"/>${d ? `<path class="bar-m" d="${d}"/>` : ''}<rect x="${L + slot * i}" y="${T}" width="${slot}" height="${ih + B}" fill="transparent"/></g>`;
+    }).join('');
+    const xl = rows.map((x, i) => (rows.length - 1 - i) % labelEvery === 0 ? `<text x="${L + slot * i + slot / 2}" y="${H - 7}" text-anchor="middle">${pointLabel(x.key)}</text>` : '').join('');
+    box.innerHTML = `<div class="chart" style="height:${H}px"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart by day. Use View table for exact values.">
+      ${ticks.map(t => `<line class="gl" x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}"/><text x="${L - 8}" y="${y(t) + 4}" text-anchor="end">${key === 'revenue' ? shortMoney(t) : t}</text>`).join('')}${bars}${xl}</svg><div class="tip" hidden></div></div>`;
+    const tip = $('.tip', box), chart = $('.chart', box);
+    const show = g => {
+      const i = Number(g.dataset.i), x = rows[i];
+      tip.innerHTML = `<b class="num">${fmtV(x[key])}</b>${tipLine(x)}`;
+      tip.hidden = false;
+      const cx = L + slot * i + slot / 2, half = tip.offsetWidth / 2;
+      tip.style.left = Math.min(W - half, Math.max(half, cx)) + 'px';
+      tip.style.top = Math.max(tip.offsetHeight + 2, y(x[key]) - 8) + 'px';
     };
     $$('.slot', box).forEach(g => { g.onmouseenter = () => show(g); g.onclick = () => show(g); });
     chart.onmouseleave = () => { tip.hidden = true; };
@@ -968,7 +1230,7 @@
     };
   }
 
-  const VIEWS = { overview: viewOverview, orders: viewOrders, products: viewProducts, customers: viewCustomers, discounts: viewDiscounts, home: viewHome, themes: viewThemes };
+  const VIEWS = { overview: viewOverview, analytics: viewAnalytics, orders: viewOrders, products: viewProducts, customers: viewCustomers, discounts: viewDiscounts, home: viewHome, themes: viewThemes };
 
   // ------------------------------------------------------------ start
   let hashBound = false;

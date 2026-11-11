@@ -92,6 +92,7 @@ window.A = (function () {
       const next = (c[id] || 0) + qty;
       if (next > p.stock) { toast(`Only ${p.stock} left in stock`); c[id] = p.stock; setCart(c); return false; }
       c[id] = next; setCart(c);
+      window.AlolaTrack?.send('add_to_cart', { product_id: id, qty });
       return true;
     });
   }

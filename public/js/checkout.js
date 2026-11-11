@@ -46,6 +46,7 @@
   }
 
   if (!(await A.cartLines()).length) return renderEmpty();
+  window.AlolaTrack?.send('checkout_start');
 
   root.innerHTML = `<div class="page-h"><a class="crumb" href="shop.html">${A.ICON.back} Keep shopping</a><h1>Check<em>out</em></h1></div>
     <form class="co" id="form" novalidate>
@@ -114,6 +115,7 @@
       data.save = !!data.save;
       const order = await Acc.placeOrder({ ...data, code: appliedCode || '', items: cartItems(lines) });
       A.setCart({});
+      window.AlolaTrack?.send('purchase', { order: order.number });
       success(order);
     } catch (err) {
       if (err.fields) showErrors(err.fields);
