@@ -272,3 +272,5 @@ html{-webkit-tap-highlight-color:rgba(102,121,74,.18)}
 a,button,input,select,textarea,label{touch-action:manipulation}
 h1,h2,h3{text-wrap:balance}
 .dr{overscroll-behavior:contain}
+.radios{display:flex;flex-wrap:wrap;gap:0 18px;margin-top:8px}
+.note code{font-size:12px;background:var(--bg2);padding:1px 5px;border-radius:5px}

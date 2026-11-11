@@ -4,8 +4,32 @@
   A.mountChrome('home');
   $$('[data-sprig]').forEach(el => el.insertAdjacentHTML('afterbegin', alolaSprig()));
 
-  // Hero: wreath is decorative and works even if the API is slow.
-  $('#stageWreath').innerHTML = alolaWreath({ leaves: 32 });
+  // Hero boxes: the content set in the dashboard's Home page tab, or the built-in design.
+  // The last version is kept in the browser so a returning visitor doesn't see the old one flash first.
+  const HERO_KEY = 'alola_hero', previewing = new URLSearchParams(location.search).get('hero') === 'preview';
+  const readJSON = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+  let heroData = previewing ? readJSON('alola_hero_preview') : readJSON(HERO_KEY), heroPics = {}, products = null;
+  function drawHero() {
+    heroPics = AlolaHero.render(heroData);
+    $('#stageWreath').innerHTML = alolaWreath({ leaves: 32 });
+    drawHeroArt();
+  }
+  // Drawings of real catalogue items fill the picture spots that have no custom picture.
+  function drawHeroArt() {
+    if (!products) return;
+    const inStock = products.filter(p => p.stock > 0);
+    const heroProduct = inStock.find(p => p.art === 'perfume') || inStock[0];
+    if (heroProduct && !heroPics.main) $('#heroPack').innerHTML = alolaArt(heroProduct);
+    if (products[3] && !heroPics.t2) $('#artT2').innerHTML = alolaArt(products[3]);
+    if (products[1] && !heroPics.t3) $('#artT3').innerHTML = alolaArt(products[1]);
+  }
+  drawHero();
+  if (previewing) A.toast('Preview: this is how the home page looks with your unsaved changes');
+  else A.config().then(c => {
+    try { c.hero ? localStorage.setItem(HERO_KEY, JSON.stringify(c.hero)) : localStorage.removeItem(HERO_KEY); } catch {}
+    if (JSON.stringify(c.hero) !== JSON.stringify(heroData)) { heroData = c.hero; drawHero(); }
+  }).catch(() => {});
+
   const hero = $('#hero');
   if (!A.reduced && matchMedia('(hover:hover)').matches) {
     hero.addEventListener('mousemove', e => {
@@ -24,16 +48,11 @@
     catch (err) { A.toast(err.message); }
   });
 
-  let products;
   try { products = await A.products(); }
   catch { $('#rail').innerHTML = '<div class="empty">Products could not be loaded. Please refresh the page.</div>'; A.reveal(); return; }
 
   // Hero art uses real catalogue items, so it follows edits made in the dashboard.
-  const inStock = products.filter(p => p.stock > 0);
-  const heroProduct = inStock.find(p => p.art === 'perfume') || inStock[0];
-  if (heroProduct) $('#heroPack').innerHTML = alolaArt(heroProduct);
-  if (products[3]) $('#artT2').innerHTML = alolaArt(products[3]);
-  if (products[1]) $('#artT3').innerHTML = alolaArt(products[1]);
+  drawHeroArt();
 
   // Stats
   const brands = [...new Set(products.map(p => p.brand))];

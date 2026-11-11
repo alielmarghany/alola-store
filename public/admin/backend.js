@@ -161,6 +161,12 @@ window.AdminDB = (function () {
       return data.theme;
     },
     setTheme: theme => rpc('admin_set_theme', { p_theme: theme }),
+    hero: async () => {
+      const { data, error } = await sb.from('store_settings').select('hero').single();
+      check(error);
+      return data.hero;
+    },
+    setHero: hero => rpc('admin_set_hero', { p_hero: hero }),
     liveTheme: () => rpc('current_theme'),
     themeSchedules: async () => {
       const { data, error } = await sb.from('theme_schedule').select('*').order('starts_at', { ascending: false });

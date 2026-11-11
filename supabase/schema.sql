@@ -116,7 +116,8 @@ create table store_settings (
   id boolean primary key default true check (id), -- single row
   shipping_fee integer not null default 60,
   free_shipping_over integer not null default 1000,
-  theme text not null default 'default' check (theme in ('default','newyear','halloween','ramadan','eid'))
+  theme text not null default 'default' check (theme in ('default','newyear','halloween','ramadan','eid')),
+  hero jsonb -- the home page's three hero boxes as set in the dashboard; empty means the built-in design
 );
 insert into store_settings default values;
 
@@ -377,6 +378,59 @@ begin
   return p_theme;
 end $$;
 
+-- Cleans one hero box from the dashboard: only known fields, length limits, and links,
+-- pictures and colours in a safe form, since every visitor's browser shows them.
+create function hero_box(b jsonb, keys text[], lims integer[]) returns jsonb language plpgsql immutable set search_path = public as $$
+declare
+  o jsonb := '{}';
+  v text;
+begin
+  for i in 1 .. array_length(keys, 1) loop
+    v := btrim(coalesce(b->>keys[i], ''));
+    if char_length(v) > lims[i] then raise exception 'Some text is too long (% characters at most)', lims[i]; end if;
+    -- A link is a full https:// address or a page of this store, like shop.html or #reviews. Nothing else, so no javascript: links.
+    if keys[i] like '%link' and v <> '' and not (v ~ '^https://[^\s"''<>\\]+$' or (v ~ '^[A-Za-z0-9_#?./][A-Za-z0-9_./?=&%#+-]*$' and v !~ '^//')) then
+      raise exception 'Links must start with https:// or be a page of this store, like shop.html';
+    end if;
+    o := o || jsonb_build_object(keys[i], v);
+  end loop;
+  v := btrim(coalesce(b->>'image', ''));
+  if v <> '' and v !~ '^https://[^\s"''<>()\\]+$' then raise exception 'That picture address isn’t valid'; end if;
+  o := o || jsonb_build_object('image', v);
+  v := coalesce(b->>'image_mode', 'art');
+  o := o || jsonb_build_object('image_mode', case when v in ('art', 'cover') then v else 'art' end);
+  v := lower(btrim(coalesce(b->>'bg', '')));
+  if v <> '' and v !~ '^#[0-9a-f]{6}$' then raise exception 'Colours must look like #66794a'; end if;
+  return o || jsonb_build_object('bg', v);
+end $$;
+
+-- Saves the home page hero from the dashboard. Null puts the built-in design back.
+create function admin_set_hero(p_hero jsonb) returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_main constant text[] := array['eyebrow','eyebrow_ar','line1','line1_ar','line2','line2_ar','text','text_ar','btn1_label','btn1_label_ar','btn1_link','btn2_label','btn2_label_ar','btn2_link'];
+  v_main_lim constant integer[] := array[40,40,24,24,24,24,220,220,30,30,300,30,30,300];
+  v_side constant text[] := array['title','title_ar','text','text_ar','link'];
+  v_side_lim constant integer[] := array[16,16,80,80,300];
+  v_box jsonb;
+  v_out jsonb;
+begin
+  perform require_admin();
+  if p_hero is null or jsonb_typeof(p_hero) = 'null' then
+    update store_settings set hero = null where id;
+    return null;
+  end if;
+  if jsonb_typeof(p_hero) <> 'object' then raise exception 'Invalid home page content'; end if;
+  foreach v_box in array array[coalesce(p_hero->'main', '{}'), coalesce(p_hero->'t2', '{}'), coalesce(p_hero->'t3', '{}')] loop
+    if jsonb_typeof(v_box) <> 'object' then raise exception 'Invalid home page content'; end if;
+  end loop;
+  v_out := jsonb_build_object(
+    'main', hero_box(coalesce(p_hero->'main', '{}'), v_main, v_main_lim),
+    't2', hero_box(coalesce(p_hero->'t2', '{}'), v_side, v_side_lim),
+    't3', hero_box(coalesce(p_hero->'t3', '{}'), v_side, v_side_lim));
+  update store_settings set hero = v_out where id;
+  return v_out;
+end $$;
+
 -- Updates prices and stock from the shop's own item sheet, matching rows by product code.
 -- Each row is {code, price, stock}; a missing price or stock leaves that value as it is.
 -- Prices are rounded to whole pounds. Returns how many products changed.
@@ -590,7 +644,7 @@ grant execute on function preview_discount(text, jsonb) to anon, authenticated;
 grant execute on function current_theme() to anon, authenticated;
 grant execute on function admin_add_theme_schedule(text, text, text) to authenticated;
 grant execute on function admin_analytics(), admin_list_products(), admin_list_orders(text, text, integer), admin_get_order(bigint),
-  admin_set_order_status(bigint, text), admin_set_theme(text), admin_list_customers(text, text, integer), admin_get_customer(bigint), admin_import_sheet(jsonb) to authenticated;
+  admin_set_order_status(bigint, text), admin_set_theme(text), admin_list_customers(text, text, integer), admin_get_customer(bigint), admin_import_sheet(jsonb), admin_set_hero(jsonb) to authenticated;
 
 -- ---------------------------------------------------------------- live notifications
 alter publication supabase_realtime add table notifications;

@@ -118,8 +118,8 @@ html[data-theme] .crumb,html[data-theme] .linkish{color:var(--olive)}
 /* ---------- hero ---------- */
 html[data-theme] .tile{border-radius:0;border:3px solid var(--olive);box-shadow:6px 6px 0 var(--rose)}
 html[data-theme] .main{background:var(--hero);border-color:var(--rose);box-shadow:6px 6px 0 var(--olive),0 0 30px rgba(0,0,0,.5);color:#fff}
-html[data-theme] .main .eyebrow{font-size:0;border-radius:0;background:rgba(0,0,0,.35);border:1px solid var(--gold)}
-html[data-theme] .main .eyebrow::before{content:var(--greeting);font-size:16px;color:var(--gold);font-family:var(--greeting-font,var(--display));letter-spacing:.04em}
+html[data-theme] .main .eyebrow:not(.custom){font-size:0;border-radius:0;background:rgba(0,0,0,.35);border:1px solid var(--gold)}
+html[data-theme] .main .eyebrow:not(.custom)::before{content:var(--greeting);font-size:16px;color:var(--gold);font-family:var(--greeting-font,var(--display));letter-spacing:.04em}
 html[data-theme] .main h1 .ln-m>span{background:var(--hero-h1);-webkit-background-clip:text;background-clip:text;color:transparent}
 html[data-theme] .main h1{filter:drop-shadow(3px 3px 0 var(--pu));letter-spacing:.02em;line-height:1}
 html[data-theme] .main h1 em{display:inline-block;font-family:var(--display);font-style:normal;font-size:1em;line-height:1;background:var(--hero-em);-webkit-background-clip:text;background-clip:text;color:transparent}

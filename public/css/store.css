@@ -461,3 +461,19 @@ h1,h2,h3{text-wrap:balance}
 .pr,.tot,.qt b,.cart-count{font-variant-numeric:tabular-nums}
 .dr,.side{overscroll-behavior:contain}
 .mq-pause{align-self:end}
+/* ------- hero boxes set in the dashboard ------- */
+.main .eyebrow-gap{margin-bottom:auto}
+.stage .hero-pack img{width:100%;height:100%;object-fit:contain}
+.tile .tile-art img{width:100%;height:100%;object-fit:contain}
+.tile .cover{position:absolute;inset:0;z-index:0;background:center/cover no-repeat}
+.tile .cover::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(20,14,10,.72),rgba(20,14,10,.18) 55%,rgba(20,14,10,.05))}
+.bento .tile.has-cover{color:#fff}
+.tile.has-cover>:not(.cover):not(.tile-link):not(.stage):not(.tile-art){position:relative;z-index:1}
+.tile.has-cover .stage,.tile.has-cover .tile-art{display:none}
+.tile.has-cover small{opacity:.94}
+.bento .tile.on-light{color:var(--ink)}.bento .tile.on-dark{color:#fff}
+.main.on-light .eyebrow{background:rgba(0,0,0,.07)}
+.main.on-light .btn.gh{border-color:rgba(59,38,29,.4);color:var(--ink)}
+.tile-link{position:absolute;inset:0;z-index:3;border-radius:inherit}
+.tile:has(.tile-link):hover{transform:translateY(-3px)}
+.tile:has(.tile-link){transition:transform .3s var(--ease)}

@@ -447,6 +447,33 @@ test('the item sheet updates price and stock by product code, for admins only', 
   await admin('update products set code=null, price=$2, stock=$3 where id=$1', [b.id, b.price, b.stock]);
 });
 
+test('the home page hero is set by admins, cleaned, and readable by everyone', async () => {
+  const hero = {
+    main: { eyebrow: ' Eid sale ', line1: 'Glow', line2: 'brighter.', text: 'Up to 30% off', btn1_label: 'Shop now', btn1_link: 'shop.html?category=Skincare',
+      btn2_label: 'Brands', btn2_link: '#brands', image: 'https://x.supabase.co/storage/v1/object/public/product-images/a.webp', image_mode: 'cover', bg: '#3F4F2C', sneaky: 'dropped' },
+    t2: { title: '24h', text: 'Cairo delivery', link: 'https://example.com/offer', bg: '' },
+    t3: { title: 'COD', title_ar: 'كاش', text: 'Pay on delivery', image_mode: 'weird' },
+  };
+  await assert.rejects(stranger('select admin_set_hero($1::jsonb)', [JSON.stringify(hero)]), /Not authorised/);
+  await assert.rejects(anon('select admin_set_hero($1::jsonb)', [JSON.stringify(hero)]), /permission denied/);
+  const saved = (await one(admin('select admin_set_hero($1::jsonb) r', [JSON.stringify(hero)]))).r;
+  assert.equal(saved.main.eyebrow, 'Eid sale');
+  assert.equal(saved.main.bg, '#3f4f2c');
+  assert.equal(saved.main.sneaky, undefined);
+  assert.equal(saved.t3.image_mode, 'art');
+  assert.equal(saved.t3.title_ar, 'كاش');
+  assert.deepEqual((await one(anon('select hero from store_settings'))).hero, saved);
+  // Unsafe links, pictures and colours are refused, and nothing changes.
+  for (const bad of [{ main: { btn1_link: 'javascript:alert(1)' } }, { main: { btn1_link: '//evil.example' } }, { t2: { link: 'data:text/html,x' } },
+    { main: { image: 'http://insecure.example/a.png' } }, { main: { image: 'https://x.example/a.png")' } }, { t2: { bg: 'red;background:url(x)' } },
+    { t3: { title: 'x'.repeat(17) } }, { main: [] }]) {
+    await assert.rejects(admin('select admin_set_hero($1::jsonb)', [JSON.stringify(bad)]), /./, JSON.stringify(bad));
+  }
+  assert.deepEqual((await one(anon('select hero from store_settings'))).hero, saved);
+  await admin('select admin_set_hero(null)');
+  assert.equal((await one(anon('select hero from store_settings'))).hero, null);
+});
+
 test('clearing sample data leaves real clients and products', async () => {
   await db.exec(sql('clear-sample-data.sql'));
   assert.equal((await db.query("select * from customers where email like '%@example.com'")).rows.length, 0);

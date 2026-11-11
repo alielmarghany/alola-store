@@ -31,6 +31,7 @@
     products: SVG('<path d="M9 3h6v4H9zM7 7h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/>'),
     customers: SVG('<circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M16 4a4 4 0 0 1 0 8M22 21c0-3-1.500-5-4-5.700"/>'),
     discounts: SVG('<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9zM8 8v.01M15.500 8.500l-7 7"/>'),
+    home: SVG('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 13h5M8 16h8"/>'),
     themes: SVG('<path d="M12 3a9 9 0 1 0 0 18c1.500 0 2-1 2-2 0-1.500-1-2-1-3 0-1 1-2 2-2h2a4 4 0 0 0 4-4c0-4-4-7-9-7z"/><circle cx="7.500" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/>'),
     store: SVG('<path d="M3 10v10h18V10M2 10l2-6h16l2 6zM9 20v-6h6v6"/>'),
     out: SVG('<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h10"/>'),
@@ -75,7 +76,7 @@
   }
 
   // ------------------------------------------------------------ shell + routing
-  const NAV = [['overview', 'Overview'], ['orders', 'Orders'], ['products', 'Products'], ['customers', 'Customers'], ['discounts', 'Discounts'], ['themes', 'Themes']];
+  const NAV = [['overview', 'Overview'], ['orders', 'Orders'], ['products', 'Products'], ['customers', 'Customers'], ['discounts', 'Discounts'], ['home', 'Home page'], ['themes', 'Themes']];
   const notif = { unread: 0, rows: [], pop: false };
 
   function renderShell() {
@@ -100,10 +101,11 @@
     if (unsaved()) {
       const target = location.hash;
       history.replaceState(null, '', lastHash || '#/overview');
-      confirmDiscard().then(ok => { if (ok) { drawer.dirty = false; location.hash = target; } });
+      confirmDiscard().then(ok => { if (ok) { drawer.dirty = false; page.dirty = false; location.hash = target; } });
       return;
     }
     lastHash = location.hash;
+    page.dirty = false;
     const [, name, id] = location.hash.match(/^#\/(\w+)(?:\/(\d+))?/) || [];
     const key = VIEWS[name] ? name : 'overview';
     $$('[data-nav]').forEach(a => { const on = a.dataset.nav === key; a.classList.toggle('it', true); a.classList.toggle('cur', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
@@ -215,10 +217,13 @@
     $('.x', root)?.focus();
     return $('.dr', root);
   }
-  const unsaved = () => drawer.guard && drawer.dirty && !!$('#drawerRoot .dr');
+  // A page that is itself a form (the Home page tab) sets page.dirty while it has unsaved edits.
+  const page = { dirty: false };
+  const drawerUnsaved = () => drawer.guard && drawer.dirty && !!$('#drawerRoot .dr');
+  const unsaved = () => drawerUnsaved() || page.dirty;
   const confirmDiscard = () => confirmDialog('Discard your changes?', 'You have edits in this form that haven’t been saved.', 'Discard changes', 'Keep editing');
   async function requestClose() {
-    if (unsaved() && !(await confirmDiscard())) return;
+    if (drawerUnsaved() && !(await confirmDiscard())) return;
     closeDrawer();
   }
   function closeDrawer() { const r = $('#drawerRoot'); if (r) r.innerHTML = ''; drawer.dirty = false; }
@@ -774,7 +779,105 @@
     });
   }
 
-  const VIEWS = { overview: viewOverview, orders: viewOrders, products: viewProducts, customers: viewCustomers, discounts: viewDiscounts, themes: viewThemes };
+  // ------------------------------------------------------------ home page hero boxes
+  const HERO_BOXES = [
+    ['main', 'Big box', 'The large box on the left. Its heading has two lines: the second is shown in the accent style.', [
+      ['eyebrow', 'Small label at the top', 40, 'Delivered across Egypt'], ['line1', 'Heading, line 1', 24, 'Glow'], ['line2', 'Heading, line 2 (accent)', 24, 'loud.'],
+      ['text', 'Text under the heading', 220, 'Skincare, makeup, hair and fragrance…', true], ['btn1_label', 'Button 1 text', 30, 'Shop now'], ['btn2_label', 'Button 2 text', 30, 'The ritual']]],
+    ['t2', 'Small box, top', 'The upper box on the right.', [['title', 'Big text', 16, '24h'], ['text', 'Small text', 80, 'Cairo delivery, 3 days nationwide', true]]],
+    ['t3', 'Small box, bottom', 'The lower box on the right.', [['title', 'Big text', 16, 'COD'], ['text', 'Small text', 80, 'Pay in cash when it arrives', true]]],
+  ];
+  const LINK_HELP = 'A page of the store, like <code>shop.html</code> or <code>shop.html?brand=Anua</code>, or a full address starting with <code>https://</code>.';
+  async function viewHome(el, token) {
+    el.innerHTML = '<div class="skeleton" style="height:420px"></div>';
+    let saved;
+    try { saved = await db.hero(); } catch (e) { return fail(e); }
+    if (token !== viewToken) return;
+    const data = JSON.parse(JSON.stringify(saved || AlolaHero.DEFAULT));
+    const v = (box, k) => data[box]?.[k] ?? '';
+    const textPair = (box, [k, label, max, ph, area]) => {
+      const tag = (lang, id, val, dir) => area
+        ? `<textarea class="in" id="${id}" maxlength="${max}" rows="2"${dir} placeholder="${esc(lang === 'en' ? ph : '')}">${esc(val)}</textarea>`
+        : `<input class="in" id="${id}" maxlength="${max}" autocomplete="off"${dir} placeholder="${esc(lang === 'en' ? ph : '')}" value="${esc(val)}">`;
+      return `<div class="f2"><div class="fld"><label for="h_${box}_${k}">${label}</label>${tag('en', `h_${box}_${k}`, v(box, k), '')}</div>
+        <div class="fld"><label for="h_${box}_${k}_ar">${label} (Arabic)</label>${tag('ar', `h_${box}_${k}_ar`, v(box, k + '_ar'), ' dir="rtl"')}</div></div>`;
+    };
+    const linkField = (box, k, label) => `<div class="fld"><label for="h_${box}_${k}">${label}</label><input class="in" id="h_${box}_${k}" maxlength="300" autocomplete="off" spellcheck="false" inputmode="url" placeholder="shop.html" value="${esc(v(box, k))}"><small>${LINK_HELP}</small></div>`;
+    const picture = box => `<div class="fld"><span class="lb">Picture</span>
+        <div class="pv-box"><div class="pv-img" id="h_${box}_pv"></div><div style="flex:1;min-width:0">
+          <small>PNG, JPG or WebP, up to 5&nbsp;MB. Without a picture, a product drawing is shown.</small>
+          <div class="up"><label class="btn ln" style="cursor:pointer">Upload<input type="file" id="h_${box}_file" accept="image/png,image/jpeg,image/webp" class="sr"></label><button type="button" class="btn ln" id="h_${box}_rm">Remove</button></div>
+          <div class="radios" role="radiogroup" aria-label="Picture style">
+            <label class="tg"><input type="radio" name="h_${box}_mode" value="art" ${v(box, 'image_mode') !== 'cover' ? 'checked' : ''}> In the drawing’s place</label>
+            <label class="tg"><input type="radio" name="h_${box}_mode" value="cover" ${v(box, 'image_mode') === 'cover' ? 'checked' : ''}> Fill the whole box</label></div>
+        </div></div></div>`;
+    const colour = box => `<div class="fld"><span class="lb">Background colour</span>
+        <label class="tg"><input type="checkbox" id="h_${box}_bgon" ${v(box, 'bg') ? 'checked' : ''}> Use my own colour</label>
+        <input type="color" id="h_${box}_bg" value="${esc(v(box, 'bg') || (box === 'main' ? '#66794a' : box === 't2' ? '#f3c9c9' : '#e8d3a8'))}" aria-label="Background colour" style="width:64px;height:40px;border:0;background:none;padding:0">
+        <small>Text turns dark or light to stay readable. Ignored when the picture fills the box.</small></div>`;
+
+    el.innerHTML = `<div class="bar"><p class="note" style="flex:1;min-width:240px">The three boxes at the top of the home page. Use them for offers and ads. Leave the English text empty to hide something. Arabic visitors see the Arabic text, or the English one when the Arabic is empty.</p>
+        <button class="btn ln" id="hReset">Reset to original</button><button class="btn ln" id="hPreview">Preview</button><button class="btn" id="hSave">Save changes</button></div>
+      <div class="form-err" id="hErr" role="alert" hidden></div>
+      ${HERO_BOXES.map(([box, title, help, texts]) => `<div class="card" style="margin-bottom:14px"><h2>${title}</h2><p class="note" style="margin:-6px 0 12px">${help}</p>
+        ${texts.map(t => textPair(box, t)).join('')}
+        ${box === 'main' ? `<div class="f2">${linkField(box, 'btn1_link', 'Button 1 link')}${linkField(box, 'btn2_link', 'Button 2 link')}</div><p class="note" style="margin:-4px 0 12px">A button shows only when it has both text and a link.</p>`
+          : linkField(box, 'link', 'Link (optional): makes the whole box clickable')}
+        ${picture(box)}${colour(box)}</div>`).join('')}`;
+    $('#sub').textContent = saved ? 'Showing your saved boxes' : 'Showing the original design';
+
+    const val = id => $(`#${id}`, el).value.trim();
+    const images = Object.fromEntries(HERO_BOXES.map(([b]) => [b, v(b, 'image')]));
+    const showPic = b => {
+      $(`#h_${b}_pv`, el).innerHTML = images[b] ? `<img src="${esc(images[b])}" alt="">` : '<span class="note">None</span>';
+      $(`#h_${b}_rm`, el).hidden = !images[b];
+    };
+    for (const [b] of HERO_BOXES) {
+      showPic(b);
+      $(`#h_${b}_rm`, el).onclick = () => { images[b] = ''; showPic(b); page.dirty = true; };
+      $(`#h_${b}_file`, el).onchange = e => {
+        const file = e.target.files[0]; e.target.value = '';
+        if (!file) return;
+        db.upload(file).then(url => { images[b] = url; showPic(b); page.dirty = true; }).catch(fail);
+      };
+      $(`#h_${b}_bg`, el).addEventListener('input', () => { $(`#h_${b}_bgon`, el).checked = true; });
+    }
+    el.addEventListener('input', () => { page.dirty = true; });
+    el.addEventListener('change', e => { if (e.target.type !== 'file') page.dirty = true; });
+
+    function collect() {
+      const out = {};
+      for (const [b, , , texts] of HERO_BOXES) {
+        const box = out[b] = {};
+        for (const [k] of texts) { box[k] = val(`h_${b}_${k}`); box[k + '_ar'] = val(`h_${b}_${k}_ar`); }
+        for (const k of b === 'main' ? ['btn1_link', 'btn2_link'] : ['link']) {
+          box[k] = val(`h_${b}_${k}`);
+          if (box[k] && !AlolaHero.safeLink(box[k])) throw new Error('Links must start with https:// or be a page of this store, like shop.html');
+        }
+        box.image = images[b];
+        box.image_mode = $(`input[name="h_${b}_mode"]:checked`, el).value;
+        box.bg = $(`#h_${b}_bgon`, el).checked ? $(`#h_${b}_bg`, el).value.toLowerCase() : '';
+      }
+      return out;
+    }
+    const showErr = m => { const e = $('#hErr', el); e.textContent = m; e.hidden = !m; if (m) e.scrollIntoView({ block: 'center' }); };
+    $('#hPreview', el).onclick = () => {
+      try { localStorage.setItem('alola_hero_preview', JSON.stringify(collect())); showErr(''); window.open('../?hero=preview', '_blank', 'noopener'); }
+      catch (e) { showErr(e.message); }
+    };
+    $('#hSave', el).onclick = async e => {
+      const btn = e.currentTarget; btn.disabled = true;
+      try { await db.setHero(collect()); page.dirty = false; showErr(''); toast('Home page updated. Visitors see it on their next visit.'); $('#sub').textContent = 'Showing your saved boxes'; }
+      catch (ex) { if (!ex.handled) showErr(ex.message); }
+      btn.disabled = false;
+    };
+    $('#hReset', el).onclick = async () => {
+      if (!(await confirmDialog('Go back to the original boxes?', 'The home page shows the built-in boxes again (“Glow loud.”, 24h, COD). Your saved boxes are removed.', 'Reset', 'Keep mine'))) return;
+      try { await db.setHero(null); page.dirty = false; toast('Home page reset to the original'); viewHome(el, ++viewToken); } catch (e) { fail(e); }
+    };
+  }
+
+  const VIEWS = { overview: viewOverview, orders: viewOrders, products: viewProducts, customers: viewCustomers, discounts: viewDiscounts, home: viewHome, themes: viewThemes };
 
   // ------------------------------------------------------------ start
   let hashBound = false;
