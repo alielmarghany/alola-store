@@ -1046,7 +1046,7 @@
     ['main', 'Big box', 'The large box on the left. Its heading has two lines: the second is shown in the accent style.', [
       ['eyebrow', 'Small label at the top', 40, 'Delivered across Egypt'], ['line1', 'Heading, line 1', 24, 'Glow'], ['line2', 'Heading, line 2 (accent)', 24, 'loud.'],
       ['text', 'Text under the heading', 220, 'Skincare, makeup, hair and fragrance…', true], ['btn1_label', 'Button 1 text', 30, 'Shop now'], ['btn2_label', 'Button 2 text', 30, 'The ritual']]],
-    ['t2', 'Small box, top', 'The upper box on the right.', [['title', 'Big text', 16, '24h'], ['text', 'Small text', 80, 'Cairo delivery, 3 days nationwide', true]]],
+    ['t2', 'Small box, top', 'The upper box on the right.', [['title', 'Big text', 16, '3–4 days'], ['text', 'Small text', 80, 'Delivery anywhere in Egypt', true]]],
     ['t3', 'Small box, bottom', 'The lower box on the right.', [['title', 'Big text', 16, 'COD'], ['text', 'Small text', 80, 'Pay in cash when it arrives', true]]],
   ];
   const LINK_HELP = 'A page of the store, like <code>shop.html</code> or <code>shop.html?brand=Anua</code>, or a full address starting with <code>https://</code>.';
@@ -1225,7 +1225,7 @@
       btn.disabled = false;
     };
     $('#hReset', el).onclick = async () => {
-      if (!(await confirmDialog('Go back to the original boxes?', 'The home page shows the built-in boxes again (“Glow loud.”, 24h, COD). Your saved boxes are removed.', 'Reset', 'Keep mine'))) return;
+      if (!(await confirmDialog('Go back to the original boxes?', 'The home page shows the built-in boxes again (“Glow loud.”, 3–4 days, COD). Your saved boxes are removed.', 'Reset', 'Keep mine'))) return;
       try { await db.setHero(null); page.dirty = false; toast('Home page reset to the original'); viewHome(el, ++viewToken); } catch (e) { fail(e); }
     };
   }

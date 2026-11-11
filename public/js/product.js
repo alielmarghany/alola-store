@@ -35,7 +35,7 @@
           <div class="qs" role="group" aria-label="Quantity"><button id="qMinus" aria-label="Decrease quantity">−</button><b id="qVal" aria-live="polite">1</b><button id="qPlus" aria-label="Increase quantity">+</button></div>
           <button class="btn ro" id="addBtn" style="padding:14px 34px" ${p.stock <= 0 ? 'disabled' : ''}>${p.stock <= 0 ? 'Sold out' : 'Add to cart'}</button>
         </div>
-        <div class="ben"><div>${A.ICON.check}Live stock</div><div>${A.ICON.truck}Cairo 24h, nationwide 3 days</div><div>${A.ICON.cash}Cash on delivery</div><div>${A.ICON.leaf}100% authentic</div></div>
+        <div class="ben"><div>${A.ICON.check}Live stock</div><div>${A.ICON.truck}Delivery in 3–4 days across Egypt</div><div>${A.ICON.cash}Cash on delivery</div><div>${A.ICON.leaf}100% authentic</div></div>
       </div>
     </div>
     ${tabs.length ? `<div class="tabs" role="tablist">` : '<div hidden>'}${tabs.map(([t], i) => `<button role="tab" id="tab${i}" aria-controls="panel${i}" aria-selected="${!i}">${t}</button>`).join('')}</div>

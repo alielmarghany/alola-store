@@ -194,7 +194,7 @@ window.A = (function () {
         <div><h4>Shop</h4><a href="shop.html">All products</a><a href="shop.html?category=Skincare">Skincare</a><a href="shop.html?category=Makeup">Makeup</a><a href="shop.html?category=Hair">Hair</a><a href="shop.html?category=Fragrance">Fragrance</a></div>
         <div><h4>Store</h4><a href="account.html">My account</a><a href="./#why">Why Alola</a><a href="./#brands">Brands</a><a href="./#reviews">Reviews</a></div>
         <div><h4>Staff</h4><a href="admin/">Admin dashboard</a></div>
-      </div><div class="ft-b"><span>© ${new Date().getFullYear()} Alola Cosmetics</span><span>Prices include VAT · Cash on delivery</span><button class="lang-link" id="langFoot" lang="${T.ar ? 'en' : 'ar'}">${T.ar ? 'English' : 'العربية'}</button></div></footer>
+      </div><div class="ft-b"><span>© ${new Date().getFullYear()} Alola Cosmetics</span><span>Prices include VAT · Cash on delivery · Delivery within Egypt only</span><button class="lang-link" id="langFoot" lang="${T.ar ? 'en' : 'ar'}">${T.ar ? 'English' : 'العربية'}</button></div></footer>
       <div class="ov" id="overlay"></div>
       <aside class="dr" id="cartDrawer" role="dialog" aria-modal="true" aria-labelledby="cartTitle"><div class="dh"><h3 id="cartTitle">Your cart</h3><button class="icon-btn" id="cartClose" aria-label="Close cart">${ICON.close}</button></div>
         <div class="ship" id="shipBar" hidden><span id="shipMsg"></span><i><u id="shipFill" style="width:0"></u></i></div>

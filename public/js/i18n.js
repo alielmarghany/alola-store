@@ -43,7 +43,7 @@ window.T = (function () {
     'Free delivery on orders over': 'توصيل مجاني للطلبات فوق', '1,000 EGP': '1,000 ج.م', '· Cash on delivery across Egypt': '· الدفع عند الاستلام في كل مصر',
     'Skincare, makeup, hair and fragrance from brands you trust, delivered across Egypt.': 'العناية بالبشرة والمكياج والشعر والعطور من ماركات تثقين بها، مع التوصيل لكل مصر.',
     'Shop': 'تسوقي', 'Store': 'المتجر', 'Staff': 'فريق العمل', 'Admin dashboard': 'لوحة التحكم', 'My account': 'حسابي',
-    'Prices include VAT · Cash on delivery': 'الأسعار شاملة الضريبة · الدفع عند الاستلام',
+    'Prices include VAT · Cash on delivery · Delivery within Egypt only': 'الأسعار شاملة الضريبة · الدفع عند الاستلام · التوصيل داخل مصر فقط',
     'Search products': 'ابحثي عن منتج', 'Open cart': 'فتح السلة', 'Close cart': 'إغلاق السلة', 'Menu': 'القائمة', 'Main': 'الرئيسية', 'Alola home': 'الصفحة الرئيسية', 'Filters': 'الفلاتر', 'Close filters': 'إغلاق الفلاتر', 'Shopping cart': 'سلة التسوق',
 
     // categories
@@ -53,7 +53,7 @@ window.T = (function () {
     'Delivered across Egypt': 'توصيل لكل مصر', 'Glow': 'تألّقي', 'loud.': 'بلا حدود.',
     'Skincare, makeup, hair and fragrance from the brands you trust. Real stock, real prices.': 'العناية بالبشرة والمكياج والشعر والعطور من الماركات التي تثقين بها. مخزون حقيقي وأسعار حقيقية.',
     'Shop now': 'تسوقي الآن', 'The ritual': 'روتين العناية',
-    '24h': '24 ساعة', 'Cairo delivery, 3 days nationwide': 'توصيل القاهرة، و3 أيام لباقي المحافظات',
+    '3–4 days': '3–4 أيام', 'Delivery anywhere in Egypt': 'توصيل لكل محافظات مصر', 'days': 'أيام', 'delivery anywhere in Egypt': 'توصيل لأي مكان في مصر',
     'COD': 'كاش', 'Pay in cash when it arrives': 'ادفعي نقدًا عند الاستلام',
     'products in stock': 'منتج متوفر', 'official brands': 'ماركة رسمية', 'to your door in Cairo': 'لباب بيتك في القاهرة', 'authentic': 'أصلي',
     'Handpicked': 'مختارة بعناية', 'Featured <em>favourites</em>': 'منتجاتنا <em>المميزة</em>', 'Tap a category to browse.': 'اختاري قسمًا للتصفح.',
@@ -69,7 +69,7 @@ window.T = (function () {
     '100% authentic, sourced from brand distributors. Tap a name to shop it.': 'منتجات أصلية 100% من موزعي الماركات. اضغطي على الاسم للتسوق.',
     'The basics, done properly': 'الأساسيات كما يجب', 'Why <em>Alola</em>': 'لماذا <em>العلا</em>',
     'Live stock': 'مخزون محدّث', 'If it’s on the site, it’s on our shelf.': 'ما تجدينه على الموقع موجود على رفوفنا.',
-    'Fast delivery': 'توصيل سريع', 'Cairo in 24 hours, nationwide in 3 days.': 'القاهرة خلال 24 ساعة، وباقي المحافظات خلال 3 أيام.',
+    'Delivery across Egypt': 'توصيل لكل مصر', 'To every governorate in 3–4 days. We ship within Egypt only.': 'لكل المحافظات خلال 3–4 أيام. نشحن داخل مصر فقط.',
     'Cash on delivery': 'الدفع عند الاستلام', 'Pay when it arrives, not before.': 'ادفعي عند الاستلام، وليس قبله.',
     '100% authentic': 'أصلي 100%', 'Sourced straight from brand distributors.': 'مباشرة من موزعي الماركات.',
     'Loved by <em>customers</em>': 'يحبه <em>عملاؤنا</em>',
@@ -106,7 +106,7 @@ window.T = (function () {
     // product page
     'Product not found': 'المنتج غير موجود', 'It may have been removed from the store.': 'ربما تمت إزالته من المتجر.', 'Browse all products': 'تصفحي كل المنتجات',
     'Quantity': 'الكمية', 'Decrease quantity': 'تقليل الكمية', 'Increase quantity': 'زيادة الكمية', 'Add to cart': 'أضيفي إلى السلة',
-    'Cairo 24h, nationwide 3 days': 'القاهرة 24 ساعة، والمحافظات 3 أيام',
+    'Delivery in 3–4 days across Egypt': 'توصيل خلال 3–4 أيام لكل مصر',
     'Description': 'الوصف', 'How to use': 'طريقة الاستخدام', 'Ingredients': 'المكونات',
     'Always check the packaging for the most up-to-date ingredient list.': 'راجعي العبوة دائمًا لمعرفة أحدث قائمة مكونات.', 'You may also like': 'قد يعجبك أيضًا',
 

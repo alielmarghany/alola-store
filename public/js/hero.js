@@ -11,7 +11,7 @@ window.AlolaHero = (function () {
       btn2_label: 'Our brands', btn2_label_ar: 'ماركاتنا', btn2_link: '#ritual',
       image: '', image_mode: 'art', bg: '',
     },
-    t2: { title: '24h', title_ar: '24 ساعة', text: 'Cairo delivery, 3 days nationwide', text_ar: 'توصيل القاهرة، و3 أيام لباقي المحافظات', link: '', image: '', image_mode: 'art', bg: '' },
+    t2: { title: '3–4 days', title_ar: '3–4 أيام', text: 'Delivery anywhere in Egypt', text_ar: 'توصيل لكل محافظات مصر', link: '', image: '', image_mode: 'art', bg: '' },
     t3: { title: 'COD', title_ar: 'كاش', text: 'Pay in cash when it arrives', text_ar: 'ادفعي نقدًا عند الاستلام', link: '', image: '', image_mode: 'art', bg: '' },
   };
 

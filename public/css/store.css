@@ -88,9 +88,10 @@ header.nav.sc .logo img{height:36px}
 .tile .tile-art{position:absolute;right:-8px;bottom:-14px;width:150px;height:150px;transition:transform .6s var(--ease)}
 .tile:hover .tile-art{transform:scale(1.1) rotate(-6deg)}
 .tile .tile-art .pack{width:100%;height:100%}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;padding:14px 0 10px;text-align:center}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:14px 0 10px;text-align:center}
 .stats b{font:800 42px var(--display);letter-spacing:-.03em;color:var(--olive)}
 .stats span{display:block;color:var(--mute);font-size:13px}
+.stats b small{font-size:.5em;letter-spacing:0;margin-inline-start:4px}
 
 /* ------- sections ------- */
 section{padding:72px 0}
@@ -409,8 +410,8 @@ footer.ft{background:#fff;padding:48px 0 28px}
   .tile{padding:20px}.t2,.t3{min-height:204px}
   .tile .big{font-size:40px}.tile small{font-size:13px;max-width:none}
   .tile .tile-art{width:96px;height:96px}
-  .stats,.why{grid-template-columns:1fr 1fr}
-  .stats b{font-size:32px}
+  .why{grid-template-columns:1fr 1fr}.stats{grid-template-columns:repeat(3,1fr);gap:8px}
+  .stats b{font-size:28px}.stats span{font-size:12px}
   .cats{grid-template-columns:1fr 1fr;gap:12px}
   .cat{min-height:124px;padding:18px}.cat b{font-size:20px}.cat .cat-art{width:88px;height:88px}
   section{padding:46px 0}

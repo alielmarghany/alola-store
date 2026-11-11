@@ -58,8 +58,8 @@
   // Stats
   const brands = [...new Set(products.map(p => p.brand))];
   $('#stats').innerHTML = [
-    [products.length, '', 'products in stock'], [brands.length, '', 'official brands'], [24, 'h', 'to your door in Cairo'], [100, '%', 'authentic'],
-  ].map(([n, s, l]) => `<div class="rev"><b data-count="${n}" data-suffix="${s}">0</b><span>${l}</span></div>`).join('');
+    [brands.length, '', 'official brands'], ['3–4', ' days', 'delivery anywhere in Egypt'], [100, '%', 'authentic'],
+  ].map(([n, s, l]) => `<div class="rev">${typeof n === 'number' ? `<b data-count="${n}" data-suffix="${s}">0</b>` : `<b>${n}<small>${s}</small></b>`}<span>${l}</span></div>`).join('');
 
   // Categories filter the featured rail
   const CATS = ['Skincare', 'Makeup', 'Hair', 'Fragrance'];
