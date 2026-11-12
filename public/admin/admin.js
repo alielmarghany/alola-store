@@ -37,6 +37,7 @@
     themes: SVG('<path d="M12 3a9 9 0 1 0 0 18c1.500 0 2-1 2-2 0-1.500-1-2-1-3 0-1 1-2 2-2h2a4 4 0 0 0 4-4c0-4-4-7-9-7z"/><circle cx="7.500" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/>'),
     store: SVG('<path d="M3 10v10h18V10M2 10l2-6h16l2 6zM9 20v-6h6v6"/>'),
     translate: SVG('<path d="M4 5h9M8.5 3v2M6 5c.6 3 2.6 5.4 5 6.5M11 5c-.6 3-2.8 5.6-6 7M13 21l4-9 4 9M14.4 18h5.2"/>'),
+    print: SVG('<path d="M7 9V3h10v6M7 18H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 14h10v7H7z"/>'),
     more: SVG('<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'),
     out: SVG('<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h10"/>'),
     bell: SVG('<path d="M6 10a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0"/>'),
@@ -216,6 +217,7 @@
       const bell = $('#bell'); bell.classList.remove('ring'); void bell.offsetWidth; bell.classList.add('ring');
       chime();
       toast(`<b>${esc(n.title)}</b>${esc(n.body)}`, 'ord', { label: 'View', fn: () => openOrder(n.order_id) });
+      autoPrint(n.order_id);
       if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
         try { const dn = new Notification(n.title, { body: n.body, icon: '../assets/favicon.png', tag: `order-${n.order_id}` }); dn.onclick = () => { focus(); openOrder(n.order_id); dn.close(); }; } catch {}
       }
@@ -686,7 +688,8 @@
   async function viewOrders(el, token, freshId) {
     if (!$('#oq', el)) {
       el.innerHTML = `<div class="bar"><input class="in grow" id="oq" type="search" placeholder="Search name, email, phone or order number" aria-label="Search orders" value="${esc(ordersState.q)}">
-        <select class="in" id="ost" aria-label="Filter by status"><option value="">All statuses</option>${STATUSES.map(s => `<option value="${s}" ${ordersState.status === s ? 'selected' : ''}>${cap(s)}</option>`).join('')}</select></div><div id="olist"><div class="skeleton" style="height:360px"></div></div>`;
+        <select class="in" id="ost" aria-label="Filter by status"><option value="">All statuses</option>${STATUSES.map(s => `<option value="${s}" ${ordersState.status === s ? 'selected' : ''}>${cap(s)}</option>`).join('')}</select><div style="flex:1"></div><button class="btn ln rc-chip" id="rcSet"></button></div><div id="olist"><div class="skeleton" style="height:360px"></div></div>`;
+      drawPrintChip(); $('#rcSet').onclick = openPrintSettings;
       $('#oq').oninput = debounce(e => { ordersState.q = e.target.value; ordersState.page = 1; viewOrders(el, viewToken); });
       $('#ost').onchange = e => { ordersState.status = e.target.value; ordersState.page = 1; viewOrders(el, viewToken); };
     }
@@ -706,10 +709,91 @@
     r.onkeydown = e => { if (e.key === 'Enter') fn(r); };
   });
 
+  // ------------------------------------------------------------ receipts
+  // Settings are per device (the shop's computer), kept in this browser.
+  const printSet = { paper: load('alola_receipt_paper', '80'), auto: load('alola_autoprint', false) };
+  const PAPERS = [['80', 'Receipt printer, 80 mm'], ['58', 'Small receipt printer, 58 mm'], ['a4', 'Normal printer, A4 paper']];
+  function receiptHtml(o) {
+    const d = new Date(o.created_at);
+    const date = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d);
+    const row = (en, ar, v, cls = '') => `<tr class="${cls}"><td>${en} <span class="ar">${ar}</span></td><td class="r">${v}</td></tr>`;
+    return `<div class="rc rc-${printSet.paper}">
+      <div class="rc-h"><img src="../assets/logo.png" alt="Alola"><div class="ar rc-ar">العلا</div><div>alielmarghany.github.io/alola-store</div></div>
+      <div class="rc-no"><b>${esc(o.number)}</b><span>${date}</span></div>
+      <div class="rc-sec"><div class="rc-lb">Client <span class="ar">العميل</span></div>
+        <b>${esc(o.customer_name)}</b><div>${esc(o.phone)}</div><div>${esc(o.city)}</div><div>${esc(o.address)}</div>
+        ${o.notes ? `<div class="rc-note">Note <span class="ar">ملاحظة</span>: ${esc(o.notes)}</div>` : ''}</div>
+      <table class="rc-items"><thead><tr><th>Item <span class="ar">المنتج</span></th><th class="r">Qty</th><th class="r">Total</th></tr></thead><tbody>
+        ${o.items.map(i => `<tr><td>${esc(i.name)}<small>${i.code ? `${esc(i.code)} · ` : ''}${esc(i.brand)} · ${fmt(i.price)}</small></td><td class="r">${i.qty}</td><td class="r nowrap">${fmt(i.qty * i.price)}</td></tr>`).join('')}
+      </tbody></table>
+      <table class="rc-sum">
+        ${row('Subtotal', 'المجموع', fmt(o.subtotal))}
+        ${o.discount ? row(`Discount${o.discount_code ? ` (${esc(o.discount_code)})` : ''}`, 'الخصم', `−${fmt(o.discount)}`) : ''}
+        ${row('Delivery', 'التوصيل', o.shipping ? fmt(o.shipping) : 'Free · مجاني')}
+        ${row('Total', 'الإجمالي', fmt(o.total), 'rc-tot')}
+      </table>
+      <div class="rc-pay">Cash on delivery · <span class="ar">الدفع عند الاستلام</span></div>
+      <div class="rc-f">Thank you for shopping with Alola<div class="ar">شكراً لتسوقك من العلا</div></div></div>`;
+  }
+  let printing = Promise.resolve();
+  /** Prints receipts one after another, never two print windows at once. */
+  function printReceipt(o) {
+    printing = printing.then(() => new Promise(resolve => {
+      const root = document.createElement('div'); root.id = 'printRoot'; root.innerHTML = receiptHtml(o);
+      const page = document.createElement('style');
+      page.textContent = printSet.paper === 'a4' ? '@page{size:A4;margin:14mm}' : `@page{size:${printSet.paper}mm auto;margin:2mm}`;
+      document.body.append(root, page); document.body.classList.add('printing');
+      let done = false;
+      const end = () => { if (done) return; done = true; root.remove(); page.remove(); document.body.classList.remove('printing'); removeEventListener('afterprint', end); resolve(); };
+      addEventListener('afterprint', end);
+      const img = root.querySelector('img');
+      const go = () => { setTimeout(() => { window.print(); setTimeout(end, 1000); }, 50); };
+      if (img.complete) go(); else { img.onload = img.onerror = go; }
+    }));
+    return printing;
+  }
+  /** New orders print by themselves on a device where that's switched on, once even with several tabs open. */
+  async function autoPrint(orderId) {
+    if (!printSet.auto || !orderId) return;
+    const done = load('alola_printed', []);
+    if (done.includes(orderId)) return;
+    save('alola_printed', [orderId, ...done].slice(0, 100));
+    try { printReceipt(await db.order(orderId)); } catch (e) { fail(e); }
+  }
+  const SAMPLE_ORDER = { number: 'ALO-10000', created_at: new Date().toISOString(), customer_name: 'Sara Ahmed', phone: '01001234567', city: 'Cairo', address: '12 Example Street, Building 4, Apt 9, Nasr City', notes: 'Please call before delivery',
+    items: [{ name: 'Anua Heartleaf 77% Soothing Toner', brand: 'Anua', code: '14050', price: 650, qty: 1 }, { name: 'Medicube Zero Pore Pad 2.0', brand: 'Medicube', code: '14051', price: 540, qty: 2 }],
+    subtotal: 1730, discount: 173, discount_code: 'EID10', shipping: 60, total: 1617 };
+  function openPrintSettings() {
+    const dr = openDrawer(`<div class="dr-h"><h2>Receipt printing</h2>${closeBtn}</div>
+      <div class="card"><h2>Printer</h2><div class="radios" style="display:grid;gap:2px">${PAPERS.map(([k, l]) => `<label class="tg"><input type="radio" name="rc_paper" value="${k}" ${printSet.paper === k ? 'checked' : ''}> ${l}</label>`).join('')}</div>
+        <button type="button" class="btn ln" id="rcTest" style="margin-top:10px">${I.print} Print a test receipt</button></div>
+      <div class="card"><h2>Print new orders automatically</h2>
+        <label class="tg"><input type="checkbox" id="rcAuto" ${printSet.auto ? 'checked' : ''}> On this device, print each new order’s receipt as soon as it comes in</label>
+        <p class="note" style="margin-top:8px">Keep the dashboard open on this computer. Each order prints once, even with several tabs open. Turn it on only on the computer next to the printer.</p></div>
+      <div class="card"><h2>Print without clicking (optional)</h2>
+        <p class="note">Websites can’t see whether a printer is connected, and browsers normally show the print window first. To skip that window on the shop computer:</p>
+        <ol class="note rc-steps"><li>Set the receipt printer as the <b>default printer</b> in Windows (Settings → Bluetooth &amp; devices → Printers).</li>
+          <li>Right-click the Google Chrome shortcut → <b>Properties</b>. At the end of <b>Target</b>, after the quotes, add a space and <code>--kiosk-printing</code>, then press OK.</li>
+          <li>Close every Chrome window, then open Chrome from that shortcut and log in to the dashboard.</li></ol>
+        <p class="note">Receipts then go straight to the printer. If the printer is off or out of paper, Windows keeps them in its queue and prints them when it’s back.</p></div>`);
+    $$('[name="rc_paper"]', dr).forEach(r => r.onchange = () => { printSet.paper = r.value; save('alola_receipt_paper', r.value); toast('Paper size saved for this device'); });
+    $('#rcAuto', dr).onchange = e => {
+      printSet.auto = e.target.checked; save('alola_autoprint', printSet.auto);
+      toast(printSet.auto ? 'New orders will print automatically on this device' : 'Automatic printing turned off on this device');
+      drawPrintChip();
+    };
+    $('#rcTest', dr).onclick = () => printReceipt(SAMPLE_ORDER);
+  }
+  function drawPrintChip() {
+    const b = $('#rcSet'); if (!b) return;
+    b.innerHTML = `${I.print} ${printSet.auto ? 'Auto-print on' : 'Receipt printing'}`;
+    b.classList.toggle('on', printSet.auto);
+  }
+
   async function openOrder(id) {
     let o;
     try { o = await db.order(id); } catch (e) { return fail(e); }
-    const dr = openDrawer(`<div class="dr-h"><div><h2>${o.number}</h2><div style="color:var(--mute)">${when(o.created_at)}</div></div>${closeBtn}</div>
+    const dr = openDrawer(`<div class="dr-h"><div><h2>${o.number}</h2><div style="color:var(--mute)">${when(o.created_at)}</div></div><div style="display:flex;gap:8px"><button class="btn ln" id="oPrint">${I.print} Print receipt</button>${closeBtn}</div></div>
       <div class="card"><h2>Status</h2><div class="steps" id="steps" role="group" aria-label="Order status">${STATUSES.map(s => `<button data-s="${s}" class="${s === 'cancelled' ? 'can ' : ''}${o.status === s ? 'on' : ''}" aria-pressed="${o.status === s}">${cap(s)}</button>`).join('')}</div>
         <small style="display:block;color:var(--mute);margin-top:8px">Cancelling returns the items to stock and removes the order from revenue.</small></div>
       <div class="card"><h2>Items</h2><div class="rows">${o.items.map(i => `<div class="rw"><span>${esc(i.name)}<small>${i.code ? `Code ${esc(i.code)} · ` : ''}${esc(i.brand)} · ${i.qty} × ${fmt(i.price)}</small></span><b class="num nowrap">${fmt(i.qty * i.price)}</b></div>`).join('')}
@@ -718,6 +802,7 @@
         <div class="rw"><b>Total (cash on delivery)</b><b class="num">${fmt(o.total)}</b></div></div></div>
       <div class="card"><h2>Client</h2><dl class="kv"><dt>Name</dt><dd><a href="#" id="toCust">${esc(o.customer_name)}</a></dd><dt>Phone</dt><dd><a href="tel:${esc(o.phone.replace(/[^+\d]/g, ''))}">${esc(o.phone)}</a></dd><dt>Email</dt><dd><a href="mailto:${esc(o.email)}">${esc(o.email)}</a></dd><dt>Governorate</dt><dd>${esc(o.city)}</dd><dt>Address</dt><dd>${esc(o.address)}</dd>${o.notes ? `<dt>Notes</dt><dd>${esc(o.notes)}</dd>` : ''}</dl></div>`);
     $('#toCust', dr).onclick = e => { e.preventDefault(); openCustomer(o.customer_id); };
+    $('#oPrint', dr).onclick = () => printReceipt(o);
     $('#steps', dr).onclick = async e => {
       const b = e.target.closest('[data-s]'); if (!b || b.dataset.s === o.status) return;
       const s = b.dataset.s;

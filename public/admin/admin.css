@@ -436,3 +436,37 @@ h1,h2,h3{text-wrap:balance}
 .tr-bar .note{font-size:13px;flex:1 1 200px}
 .tr-btn{min-height:38px;padding:6px 14px;background:var(--card)}
 .tr-btn svg{width:17px;height:17px}
+/* ------- receipts ------- */
+.rc-chip.on{border-color:var(--olive);color:var(--olive2);background:var(--tint)}
+.rc-steps{padding-left:20px;margin:8px 0 10px;display:grid;gap:6px}
+#printRoot{display:none}
+@media print{
+  body.printing>:not(#printRoot){display:none!important}
+  body.printing{background:#fff}
+  #printRoot{display:block;color:#000;font:400 11px/1.35 var(--body)}
+  .rc .ar{font-family:Tahoma,Arial,sans-serif}
+  .rc-h{text-align:center;padding-bottom:6px;border-bottom:1px dashed #000}
+  .rc-h img{height:34px;display:block;margin:0 auto 2px}
+  .rc-ar{font-size:14px;font-weight:700}
+  .rc-no{display:flex;justify-content:space-between;align-items:baseline;gap:6px;padding:6px 0;border-bottom:1px dashed #000;flex-wrap:wrap}
+  .rc-no b{font-size:14px}
+  .rc-sec{padding:6px 0;border-bottom:1px dashed #000;overflow-wrap:anywhere}
+  .rc-lb{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em}
+  .rc-note{margin-top:4px;font-weight:700}
+  .rc table{width:100%;border-collapse:collapse}
+  .rc th,.rc td{padding:3px 0;border:0;text-align:left;vertical-align:top;font-size:inherit;color:#000;letter-spacing:0;text-transform:none;white-space:normal}
+  .rc th{font-weight:700;border-bottom:1px solid #000}
+  .rc .r{text-align:right;padding-left:6px}
+  .rc .nowrap{white-space:nowrap}
+  .rc-items td small{display:block;font-size:9.5px;color:#000}
+  .rc-items tbody tr td{border-bottom:1px dotted #999}
+  .rc-sum{margin-top:6px}
+  .rc-sum td{padding:2px 0}
+  .rc-tot td{font-size:15px;font-weight:800;border-top:1px solid #000;padding-top:5px}
+  .rc-pay{text-align:center;font-weight:700;margin:8px 0 4px;padding:5px;border:1px solid #000}
+  .rc-f{text-align:center;padding-top:6px;border-top:1px dashed #000;margin-top:6px}
+  .rc-58{font-size:10px}
+  .rc-a4{font-size:13px;max-width:150mm;margin:0 auto}
+  .rc-a4 .rc-h img{height:48px}
+  .rc-a4 .rc-tot td{font-size:18px}
+}
