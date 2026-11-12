@@ -432,3 +432,7 @@ h1,h2,h3{text-wrap:balance}
   .bar>div[style="flex:1"]{display:none}
   .stk td.hide-s{display:none}
 }
+.tr-bar{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;background:var(--tint);border-radius:14px;padding:8px 8px 8px 14px;margin-bottom:12px}
+.tr-bar .note{font-size:13px;flex:1 1 200px}
+.tr-btn{min-height:38px;padding:6px 14px;background:var(--card)}
+.tr-btn svg{width:17px;height:17px}

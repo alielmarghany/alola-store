@@ -36,6 +36,7 @@
     home: SVG('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 13h5M8 16h8"/>'),
     themes: SVG('<path d="M12 3a9 9 0 1 0 0 18c1.500 0 2-1 2-2 0-1.500-1-2-1-3 0-1 1-2 2-2h2a4 4 0 0 0 4-4c0-4-4-7-9-7z"/><circle cx="7.500" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/>'),
     store: SVG('<path d="M3 10v10h18V10M2 10l2-6h16l2 6zM9 20v-6h6v6"/>'),
+    translate: SVG('<path d="M4 5h9M8.5 3v2M6 5c.6 3 2.6 5.4 5 6.5M11 5c-.6 3-2.8 5.6-6 7M13 21l4-9 4 9M14.4 18h5.2"/>'),
     more: SVG('<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'),
     out: SVG('<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h10"/>'),
     bell: SVG('<path d="M6 10a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0"/>'),
@@ -847,6 +848,7 @@
     const brands = [...new Set(productsState.rows.map(x => x.brand))];
     const dr = openDrawer(`<div class="dr-h"><h2>${isNew ? 'Add product' : 'Edit product'}</h2>${closeBtn}</div>
       <form id="pf" novalidate><div class="form-err" id="pe" role="alert" hidden></div>
+      ${trButton('Fill the Arabic name, description and how to use from the English.')}
       <div class="card"><h2>Details</h2>
         <div class="fld"><label for="f_name">Name</label><input class="in" id="f_name" required maxlength="120" value="${esc(v.name)}"></div>
         <div class="fld"><label for="f_code">Product code</label><input class="in" id="f_code" maxlength="40" autocomplete="off" spellcheck="false" placeholder="Optional" value="${esc(v.code || '')}"><small>Your own code for this product. Each product needs a different one.</small></div>
@@ -884,6 +886,7 @@
       $('#f_rm', dr).hidden = !image;
     }
     ['f_brand', 'f_name', 'f_category', 'f_art', 'f_color'].forEach(id => $(`#${id}`, dr).addEventListener('input', preview));
+    bindTranslate($('.tr-btn', dr), () => [['f_name', 'f_name_ar'], ['f_desc', 'f_desc_ar'], ['f_how', 'f_how_ar']].map(([a, b]) => [$(`#${a}`, dr), $(`#${b}`, dr)]));
     preview();
     $('#f_rm', dr).onclick = () => { image = null; preview(); };
     $('#f_file', dr).onchange = e => {
@@ -1142,6 +1145,7 @@
           <label class="tg"><input type="radio" name="h_${box}_kind" value="text" ${v(box, 'mode') !== 'banner' ? 'checked' : ''}> Text and drawing</label>
           <label class="tg"><input type="radio" name="h_${box}_kind" value="banner" ${v(box, 'mode') === 'banner' ? 'checked' : ''}> Banner pictures (ads)</label></div>
         <div id="h_${box}_textwrap">
+        ${trButton('Fill this box’s Arabic text from the English.')}
         ${texts.map(t => textPair(box, t)).join('')}
         ${box === 'main' ? `<div class="f2">${linkField(box, 'btn1_link', 'Button 1 link')}${linkField(box, 'btn2_link', 'Button 2 link')}</div><p class="note" style="margin:-4px 0 12px">A button shows only when it has both text and a link.</p>`
           : linkField(box, 'link', 'Link (optional): makes the whole box clickable')}
@@ -1218,6 +1222,7 @@
       };
     }
     el.addEventListener('input', e => { if (!e.target.closest('#hLogos')) page.dirty = true; });
+    HERO_BOXES.forEach(([b, , , texts]) => bindTranslate($(`#h_${b}_textwrap .tr-btn`, el), () => texts.map(([k]) => [$(`#h_${b}_${k}`, el), $(`#h_${b}_${k}_ar`, el)])));
     el.addEventListener('change', e => { if (e.target.type !== 'file' && !e.target.closest('#hLogos')) page.dirty = true; });
     drawLogos();
 
@@ -1286,6 +1291,58 @@
     };
   }
 
+  // ------------------------------------------------------------ translate to Arabic
+  // Free machine translation from MyMemory (no account): up to 500 characters a request and
+  // about 5,000 characters a day from one connection, so long text goes in pieces.
+  const trButton = what => `<div class="tr-bar"><span class="note">${what}</span><button type="button" class="btn ln tr-btn">${I.translate} Translate to Arabic</button></div>`;
+  function chunks(text, max = 450) {
+    const out = [];
+    for (const sentence of text.match(/[^.!?؟]+[.!?؟]*\s*/g) || [text]) {
+      if (out.length && (out[out.length - 1] + sentence).length <= max) out[out.length - 1] += sentence;
+      else for (let i = 0; i < sentence.length; i += max) out.push(sentence.slice(i, i + max));
+    }
+    return out;
+  }
+  const unescape = h => { const t = document.createElement('textarea'); t.innerHTML = h; return t.value; };
+  async function toArabic(text) {
+    const lines = [];
+    for (const line of text.trim().split('\n')) {
+      const parts = [];
+      for (const part of chunks(line.trim())) {
+        if (!part.trim()) continue;
+        let j = null;
+        try { j = await (await fetch(`https://api.mymemory.translated.net/get?langpair=en|ar&q=${encodeURIComponent(part.trim())}`)).json(); } catch {}
+        if (j && (j.quotaFinished || String(j.responseStatus) === '429')) throw new Error('The free translator’s daily limit is used up. Try again tomorrow, or type the Arabic yourself.');
+        if (!j || String(j.responseStatus) !== '200' || !j.responseData?.translatedText) throw new Error('Couldn’t translate right now. Check the internet connection and try again.');
+        parts.push(unescape(j.responseData.translatedText).trim());
+      }
+      lines.push(parts.join(' '));
+    }
+    return lines.join('\n');
+  }
+  /** Fills the Arabic fields from the English ones. pairs: [[englishInput, arabicInput], ...] */
+  function bindTranslate(btn, pairs) {
+    btn.onclick = async () => {
+      const todo = pairs().filter(([en]) => en && en.value.trim());
+      if (!todo.length) return toast('Write the English text first');
+      let list = todo.filter(([, ar]) => !ar.value.trim());
+      if (!list.length) {
+        if (!(await confirmDialog('Replace the Arabic text?', 'Every Arabic field here already has text. Translating again replaces it with a new machine translation.', 'Replace', 'Keep mine'))) return;
+        list = todo;
+      }
+      const label = btn.innerHTML; btn.disabled = true; btn.textContent = 'Translating…';
+      try {
+        for (const [en, ar] of list) {
+          const max = Number(ar.getAttribute('maxlength')) || 4000;
+          ar.value = (await toArabic(en.value)).slice(0, max);
+          ar.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        toast(`Translated ${list.length} field${list.length === 1 ? '' : 's'}. Read the Arabic before saving: machine translation can be wrong.`);
+      } catch (e) { fail(e); }
+      finally { btn.disabled = false; btn.innerHTML = label; }
+    };
+  }
+
   // ------------------------------------------------------------ pop-ups
   const POP_PAGES = [['home', 'Home page'], ['shop', 'All products'], ['product', 'Product pages'], ['account', 'Account page']];
   /** A stored time as Cairo local time for a datetime-local field. */
@@ -1350,6 +1407,7 @@
       <form id="ppf" novalidate><div class="form-err" id="ppe" role="alert" hidden></div>
       <div class="card"><h2>Content</h2>
         <div class="fld"><span class="lb">Type</span><div class="radios">${radio('p_kind', 'offer', 'Offer with a button', v.kind)}${radio('p_kind', 'newsletter', 'Email sign-up', v.kind)}</div></div>
+        ${trButton('Fill the Arabic title, text and button from the English.')}
         ${pair('title', 'Title', 80, false, 'Eid sale: 20% off')}
         ${pair('body', 'Text', 300, true, 'Use the code below at checkout. Ends Friday.')}
         <div class="fld"><label for="p_code">Discount code to show (optional)</label><input class="in" id="p_code" maxlength="30" autocomplete="off" spellcheck="false" style="text-transform:uppercase" placeholder="EID20" value="${esc(v.code)}"><small>Shown with a Copy button. Create the code itself in the Discounts tab.</small></div>
@@ -1398,6 +1456,7 @@
       $('#p_fdBox', dr).hidden = val('p_frequency') !== 'days';
     };
     dr.addEventListener('change', sync); sync();
+    bindTranslate($('.tr-btn', dr), () => ['title', 'body', 'button_label'].map(k => [$(`#p_${k}`, dr), $(`#p_${k}_ar`, dr)]));
 
     const collect = () => {
       const kind = $('input[name="p_kind"]:checked', dr).value;
