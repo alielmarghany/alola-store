@@ -36,6 +36,7 @@
     home: SVG('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 13h5M8 16h8"/>'),
     themes: SVG('<path d="M12 3a9 9 0 1 0 0 18c1.500 0 2-1 2-2 0-1.500-1-2-1-3 0-1 1-2 2-2h2a4 4 0 0 0 4-4c0-4-4-7-9-7z"/><circle cx="7.500" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/>'),
     store: SVG('<path d="M3 10v10h18V10M2 10l2-6h16l2 6zM9 20v-6h6v6"/>'),
+    more: SVG('<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'),
     out: SVG('<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h10"/>'),
     bell: SVG('<path d="M6 10a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0"/>'),
     x: SVG('<path d="M6 6l12 12M18 6 6 18"/>'),
@@ -78,21 +79,46 @@
   }
 
   // ------------------------------------------------------------ shell + routing
+  let tableObserver = null;
+  const MOB_NAV = ['overview', 'orders', 'products', 'customers']; // the phone's bottom bar; the rest go under More
   const NAV = [['overview', 'Overview'], ['analytics', 'Analytics'], ['orders', 'Orders'], ['products', 'Products'], ['customers', 'Customers'], ['discounts', 'Discounts'], ['home', 'Home page'], ['popups', 'Pop-ups'], ['themes', 'Themes']];
   const notif = { unread: 0, rows: [], pop: false };
 
   function renderShell() {
     app.innerHTML = `<div class="shell">
       <aside class="nav"><a class="brand" href="#/overview"><img src="../assets/logo.png" alt="Alola" width="117" height="42"></a>
-        ${NAV.map(([k, l]) => `<a class="it" href="#/${k}" data-nav="${k}">${I[k]}<span>${l}</span>${k === 'orders' ? '<span class="cnt" id="pendingCnt" hidden></span>' : ''}</a>`).join('')}
+        ${NAV.map(([k, l]) => `<a class="it${MOB_NAV.includes(k) ? '' : ' nav-x'}" href="#/${k}" data-nav="${k}">${I[k]}<span>${l}</span>${k === 'orders' ? '<span class="cnt" id="pendingCnt" hidden></span>' : ''}</a>`).join('')}
+        <button class="it mob-only" id="navMore" aria-haspopup="dialog" aria-expanded="false">${I.more}<span>More</span></button>
         <div class="sp"></div>
         <a class="it side-only" href="../" target="_blank" rel="noopener">${I.store}<span>View store</span></a>
         <button class="it side-only" id="logout">${I.out}<span>Log out</span></button>
       </aside>
       <main><div class="top"><div><h1 id="title"></h1><div class="sub" id="sub"></div></div>
-          <div class="top-r"><button class="bell" id="bell" aria-label="Notifications" aria-expanded="false">${I.bell}<span class="dot" id="dot" hidden></span></button><button class="bell mob-only" id="logout2" aria-label="Log out">${I.out}</button><div class="pop" id="pop" hidden></div></div></div>
-        <div id="view"></div></main></div><div id="drawerRoot"></div>`;
+          <div class="top-r"><button class="bell" id="bell" aria-label="Notifications" aria-expanded="false">${I.bell}<span class="dot" id="dot" hidden></span></button><div class="pop" id="pop" hidden></div></div></div>
+        <div id="view"></div></main></div><div id="drawerRoot"></div>
+      <div class="sheet-root" id="moreSheet" hidden><div class="sheet-ov" data-sheet-close></div>
+        <div class="sheet" role="dialog" aria-modal="true" aria-label="More pages"><div class="sheet-grip" aria-hidden="true"></div>
+          ${NAV.filter(([k]) => !MOB_NAV.includes(k)).map(([k, l]) => `<a class="sh-it" href="#/${k}" data-more="${k}">${I[k]}<span>${l}</span></a>`).join('')}
+          <hr><a class="sh-it" href="../" target="_blank" rel="noopener">${I.store}<span>View store</span></a>
+          <button class="sh-it" id="logout2">${I.out}<span>Log out</span></button></div></div>`;
     $('#logout').onclick = $('#logout2').onclick = async () => { await db.signOut().catch(() => {}); stopLive(); renderLogin(); };
+    // Phones show each table row as a card: every cell gets its column name to show as a label.
+    const labelTables = () => $$('.tbl-wrap:not(.flat) table:not([data-stk])').forEach(t => {
+      const heads = $$('thead th', t).map(th => th.textContent.trim());
+      t.dataset.stk = ''; t.closest('.tbl-wrap').classList.add('stk');
+      $$('tbody tr', t).forEach(tr => [...tr.children].forEach((td, i) => { td.dataset.l = heads[i] || ''; }));
+    });
+    if (!tableObserver) { tableObserver = new MutationObserver(labelTables); tableObserver.observe(app, { childList: true, subtree: true }); }
+    // Phones: four main pages in the bottom bar, the rest in a "More" sheet.
+    const sheet = $('#moreSheet');
+    const setSheet = open => {
+      if (open === !sheet.hidden) return;
+      sheet.hidden = !open; $('#navMore').setAttribute('aria-expanded', open);
+      if (open) $('.sh-it', sheet).focus(); else $('#navMore').focus({ preventScroll: true });
+    };
+    $('#navMore').onclick = () => setSheet(sheet.hidden);
+    $$('[data-sheet-close], .sh-it', sheet).forEach(b => b.addEventListener('click', () => setSheet(false)));
+    sheet.addEventListener('keydown', e => { if (e.key === 'Escape') setSheet(false); });
     $('#bell').onclick = e => { e.stopPropagation(); togglePop(); };
     document.addEventListener('click', e => { if (notif.pop && !e.target.closest('#pop')) togglePop(false); });
   }
@@ -111,6 +137,8 @@
     const [, name, id] = location.hash.match(/^#\/(\w+)(?:\/(\d+))?/) || [];
     const key = VIEWS[name] ? name : 'overview';
     $$('[data-nav]').forEach(a => { const on = a.dataset.nav === key; a.classList.toggle('it', true); a.classList.toggle('cur', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
+    $('#navMore')?.classList.toggle('cur', !MOB_NAV.includes(key));
+    $$('[data-more]').forEach(a => { const on = a.dataset.more === key; a.classList.toggle('cur', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
     const label = NAV.find(n => n[0] === key)[1];
     $('#title').textContent = label; $('#sub').textContent = '';
     updateTitle(label);
@@ -509,10 +537,10 @@
 
       <div class="card an-card"><div class="ch-h"><div><h2>Pop-ups</h2><p class="note" style="margin:2px 0 0">How each pop-up did in this period. Orders are visits where someone clicked the pop-up (or signed up) and then ordered.</p></div>
           <a class="linkbtn" href="#/popups">Manage pop-ups</a></div>
-        ${pops.length ? `<div class="tbl-wrap flat"><table><thead><tr><th>Pop-up</th><th class="r">Views</th><th class="r">Clicks</th><th class="r">Click rate</th><th class="r">New emails</th><th class="r">Orders</th><th class="r">Revenue</th></tr></thead><tbody>
+        ${pops.length ? `<div class="tbl-wrap flat"><table><thead><tr><th>Pop-up</th><th class="r">Views</th><th class="r">Clicks</th><th class="r hide-m">Click rate</th><th class="r">New emails</th><th class="r">Orders</th><th class="r">Revenue</th></tr></thead><tbody>
           ${pops.map(x => `<tr><td><b>${esc(x.title)}</b><small>${x.kind === 'newsletter' ? 'Email sign-up' : 'Offer'}${x.active ? '' : ' · off'}</small></td><td class="r num">${x.views.toLocaleString()}</td><td class="r num">${x.clicks.toLocaleString()}</td>
-            <td class="r num">${x.views ? pctTxt(pct(x.clicks, x.views)) : '–'}</td><td class="r num">${x.signups.toLocaleString()}</td><td class="r num">${x.orders.toLocaleString()}</td><td class="r num nowrap">${fmt(x.revenue)}</td></tr>`).join('')}
-          ${pops.length > 1 ? `<tr class="tot"><td><b>All pop-ups</b></td>${['views', 'clicks'].map(k => `<td class="r num"><b>${sum(k).toLocaleString()}</b></td>`).join('')}<td class="r num"><b>${sum('views') ? pctTxt(pct(sum('clicks'), sum('views'))) : '–'}</b></td>${['signups', 'orders'].map(k => `<td class="r num"><b>${sum(k).toLocaleString()}</b></td>`).join('')}<td class="r num nowrap"><b>${fmt(sum('revenue'))}</b></td></tr>` : ''}</tbody></table></div>`
+            <td class="r num hide-m">${x.views ? pctTxt(pct(x.clicks, x.views)) : '–'}</td><td class="r num">${x.signups.toLocaleString()}</td><td class="r num">${x.orders.toLocaleString()}</td><td class="r num nowrap">${fmt(x.revenue)}</td></tr>`).join('')}
+          ${pops.length > 1 ? `<tr class="tot"><td><b>All pop-ups</b></td>${['views', 'clicks'].map(k => `<td class="r num"><b>${sum(k).toLocaleString()}</b></td>`).join('')}<td class="r num hide-m"><b>${sum('views') ? pctTxt(pct(sum('clicks'), sum('views'))) : '–'}</b></td>${['signups', 'orders'].map(k => `<td class="r num"><b>${sum(k).toLocaleString()}</b></td>`).join('')}<td class="r num nowrap"><b>${fmt(sum('revenue'))}</b></td></tr>` : ''}</tbody></table></div>`
           : '<div class="empty" style="padding:26px 10px">No pop-ups were shown in this period</div>'}</div>
 
       <div class="card an-card"><div class="ch-h"><div><h2>Email sign-ups</h2><p class="note" style="margin:2px 0 0">New emails on your newsletter list, and how many came from pop-ups.</p></div>
@@ -726,9 +754,9 @@
     const list = $('#plist'); if (!list) return;
     list.innerHTML = rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>Product</th><th class="hide-m">Category</th><th class="r">Price</th><th>Stock</th><th class="hide-m r">Sold</th><th class="hide-m">Status</th><th class="r">Actions</th></tr></thead><tbody>
       ${rows.map(p => `<tr><td><div class="prod-t">${thumb(p)}<span><b>${esc(p.name)}</b><small style="color:var(--mute)">${p.code ? `Code ${esc(p.code)} · ` : ''}${esc(p.brand)}${p.featured ? ' · Featured' : ''}</small></span></div></td>
-        <td class="hide-m">${esc(p.category)}</td><td class="r num nowrap">${fmt(p.price)}${p.compare_at ? `<small><s>${fmt(p.compare_at)}</s></small>` : ''}</td>
+        <td class="hide-m hide-s">${esc(p.category)}</td><td class="r num nowrap">${fmt(p.price)}${p.compare_at ? `<small><s>${fmt(p.compare_at)}</s></small>` : ''}</td>
         <td>${p.stock <= 0 ? '<span class="st st-out">Sold out</span>' : p.stock <= 10 ? `<span class="st st-low">${p.stock} left</span>` : `<span class="num">${p.stock}</span>`}</td>
-        <td class="hide-m r num">${p.sold.toLocaleString()}</td><td class="hide-m"><span class="st st-${p.active ? 'live' : 'hidden'}">${p.active ? 'Live' : 'Hidden'}</span></td>
+        <td class="hide-m hide-s r num">${p.sold.toLocaleString()}</td><td class="hide-m"><span class="st st-${p.active ? 'live' : 'hidden'}">${p.active ? 'Live' : 'Hidden'}</span></td>
         <td><div class="acts"><button data-edit="${p.id}" aria-label="Edit ${esc(p.name)}">Edit</button><button class="del" data-del="${p.id}" aria-label="Delete ${esc(p.name)}">Delete</button></div></td></tr>`).join('')}
       </tbody></table></div>` : `<div class="card empty"><b>${q ? 'No products match' : 'No products yet'}</b>${q ? 'Try a different search.' : 'Add your first product to start selling.'}</div>`;
     $$('[data-edit]', list).forEach(b => b.onclick = () => openProductForm(productsState.rows.find(p => p.id === Number(b.dataset.edit))));
