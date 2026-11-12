@@ -156,6 +156,7 @@ window.AdminDB = (function () {
       check(error);
     },
     customersExport: () => rpc('admin_customers_export'),
+    subscribersExport: () => rpc('admin_subscribers_export'),
     orders: ({ q = '', status = '', page = 1 } = {}) => rpc('admin_list_orders', { p_q: q, p_status: status, p_page: page }),
     order: id => rpc('admin_get_order', { p_id: id }),
     setOrderStatus: (id, status) => rpc('admin_set_order_status', { p_id: id, p_status: status }),

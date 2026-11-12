@@ -410,6 +410,8 @@
     const prodRows = a.products.slice(0, 25);
     const avgRate = pct(a.products.reduce((s, x) => s + x.sold, 0), a.products.reduce((s, x) => s + x.views, 0));
     const heatMax = k => Math.max(1, ...a[k]);
+    const pops = a.popups || [], sum = k => pops.reduce((s, x) => s + x[k], 0);
+    const su = a.signups || { total: 0, fromPopups: 0, previousTotal: 0, previousFromPopups: 0, allTime: 0, recent: [] };
 
     el.innerHTML = `<div class="bar an-bar">
         <div class="seg" role="group" aria-label="Period">${[[7, '7 days'], [30, '30 days'], [90, '90 days'], [365, '12 months']].map(([d, l]) => `<button data-days="${d}" aria-pressed="${anState.days === d}" class="${anState.days === d ? 'on' : ''}">${l}</button>`).join('')}</div>
@@ -503,7 +505,24 @@
         <div class="card"><h2>Discount codes</h2><p class="note">Which codes brought orders in this period.</p>
           ${shareTable(a.discounts, [{ h: 'Code', v: r => `<b>${esc(r.code)}</b>` }, { h: 'Orders', r: 1, v: r => r.orders }, { h: 'Revenue', r: 1, v: r => fmt(r.revenue) }, { h: 'Discount given', r: 1, v: r => fmt(r.discount) }],
             { key: 'orders', empty: 'No discount codes used in this period' })}</div>
-      </div>`;
+      </div>
+
+      <div class="card an-card"><div class="ch-h"><div><h2>Pop-ups</h2><p class="note" style="margin:2px 0 0">How each pop-up did in this period. Orders are visits where someone clicked the pop-up (or signed up) and then ordered.</p></div>
+          <a class="linkbtn" href="#/popups">Manage pop-ups</a></div>
+        ${pops.length ? `<div class="tbl-wrap flat"><table><thead><tr><th>Pop-up</th><th class="r">Views</th><th class="r">Clicks</th><th class="r">Click rate</th><th class="r">New emails</th><th class="r">Orders</th><th class="r">Revenue</th></tr></thead><tbody>
+          ${pops.map(x => `<tr><td><b>${esc(x.title)}</b><small>${x.kind === 'newsletter' ? 'Email sign-up' : 'Offer'}${x.active ? '' : ' · off'}</small></td><td class="r num">${x.views.toLocaleString()}</td><td class="r num">${x.clicks.toLocaleString()}</td>
+            <td class="r num">${x.views ? pctTxt(pct(x.clicks, x.views)) : '–'}</td><td class="r num">${x.signups.toLocaleString()}</td><td class="r num">${x.orders.toLocaleString()}</td><td class="r num nowrap">${fmt(x.revenue)}</td></tr>`).join('')}
+          ${pops.length > 1 ? `<tr class="tot"><td><b>All pop-ups</b></td>${['views', 'clicks'].map(k => `<td class="r num"><b>${sum(k).toLocaleString()}</b></td>`).join('')}<td class="r num"><b>${sum('views') ? pctTxt(pct(sum('clicks'), sum('views'))) : '–'}</b></td>${['signups', 'orders'].map(k => `<td class="r num"><b>${sum(k).toLocaleString()}</b></td>`).join('')}<td class="r num nowrap"><b>${fmt(sum('revenue'))}</b></td></tr>` : ''}</tbody></table></div>`
+          : '<div class="empty" style="padding:26px 10px">No pop-ups were shown in this period</div>'}</div>
+
+      <div class="card an-card"><div class="ch-h"><div><h2>Email sign-ups</h2><p class="note" style="margin:2px 0 0">New emails on your newsletter list, and how many came from pop-ups.</p></div>
+          <button class="btn ln" id="anExpSubs">${I.customers} Email list (CSV)</button></div>
+        <div class="mini-kpis"><div><b class="num">${su.total.toLocaleString()}</b><span>new emails ${delta(su.total, su.previousTotal)}</span></div>
+          <div><b class="num">${su.fromPopups.toLocaleString()}</b><span>from pop-ups ${delta(su.fromPopups, su.previousFromPopups)}</span></div>
+          <div><b class="num">${su.total ? pctTxt(pct(su.fromPopups, su.total)) : '–'}</b><span>of new emails came from pop-ups</span></div>
+          <div><b class="num">${su.allTime.toLocaleString()}</b><span>emails on the list in total</span></div></div>
+        ${su.recent.length ? `<h3 class="an-h3">Latest emails from pop-ups</h3><div class="rows">${su.recent.map(r => `<div class="rw"><span>${esc(r.email)}<small>${esc(r.popup || 'Deleted pop-up')}</small></span><span class="note nowrap">${when(r.created_at)}</span></div>`).join('')}</div>` : ''}
+        <p class="note" style="margin-top:12px">Tip: upload the email list to Meta or TikTok Ads as a custom audience, or use it for a newsletter.</p></div>`;
     $('#sub').textContent = `Last ${a.days === 365 ? '12 months' : `${a.days} days`}`;
 
     // Period, measure and table switches.
@@ -589,6 +608,14 @@
           ['name', 'email', 'phone', 'city', 'country', 'orders', 'total_spent_egp', 'first_order', 'last_order'],
           ...rows.map(r => [r.name, r.email, intlPhone(r.phone), r.city, 'EG', r.orders, r.spent, r.first_order ? r.first_order.slice(0, 10) : '', r.last_order ? r.last_order.slice(0, 10) : ''])]);
         toast(`${rows.length} client${rows.length === 1 ? '' : 's'} downloaded`);
+      } catch (e) { fail(e); }
+    };
+    $('#anExpSubs').onclick = async () => {
+      try {
+        const rows = await db.subscribersExport();
+        downloadCsv(`alola-emails-${new Date().toISOString().slice(0, 10)}.csv`, [
+          ['email', 'signed_up', 'source', 'popup'], ...rows.map(r => [r.email, r.created_at.slice(0, 10), r.source, r.popup || ''])]);
+        toast(`${rows.length} email${rows.length === 1 ? '' : 's'} downloaded`);
       } catch (e) { fail(e); }
     };
     $('#anExpProd').onclick = () => downloadCsv(`alola-products-${a.days}d-${new Date().toISOString().slice(0, 10)}.csv`, [
@@ -1266,7 +1293,7 @@
         <div class="pp-thumb${p.layout === 'corner' ? ' corner' : ''}">${p.image ? `<img src="${esc(p.image)}" alt="">` : `<span>${p.layout === 'corner' ? 'Corner' : 'Centre'}</span>`}</div>
         <div class="pp-info"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>${esc(p.title)}</b><span class="st st-${cls}">${esc(label)}</span>${p.code ? `<span class="st st-hidden">Code ${esc(p.code)}</span>` : ''}</div>
           <small>${p.pages.map(x => POP_PAGES.find(y => y[0] === x)?.[1] || x).join(', ')} · ${triggerText(p)} · ${freqText(p)}${p.audience !== 'all' ? ` · ${p.audience === 'new' ? 'first-time visitors' : 'returning visitors'}` : ''}${p.device !== 'all' ? ` · ${p.device === 'mobile' ? 'phones' : 'computers'} only` : ''}${p.ends_at ? ` · until ${when(p.ends_at)}` : ''}</small>
-          <div class="pp-stats"><span><b class="num">${p.views.toLocaleString()}</b> views</span><span><b class="num">${p.clicks.toLocaleString()}</b> clicks</span><span><b class="num">${ctr}%</b> click rate</span><span class="note">last 30 days</span></div></div>
+          <div class="pp-stats"><span><b class="num">${p.views.toLocaleString()}</b> views</span><span><b class="num">${p.clicks.toLocaleString()}</b> clicks</span><span><b class="num">${ctr}%</b> click rate</span>${p.kind === 'newsletter' || p.signups ? `<span><b class="num">${(p.signups || 0).toLocaleString()}</b> new email${p.signups === 1 ? '' : 's'}</span>` : ''}<span class="note">last 30 days</span></div></div>
         <div class="acts pp-acts"><label class="tg" title="Show on the store"><input type="checkbox" data-on="${p.id}" ${p.active ? 'checked' : ''}> On</label>
           <button data-edit="${p.id}" aria-label="Edit ${esc(p.title)}">Edit</button><button data-copy="${p.id}" aria-label="Duplicate ${esc(p.title)}">Duplicate</button><button class="del" data-del="${p.id}" aria-label="Delete ${esc(p.title)}">Delete</button></div></div>`; }).join('')}</div>`
       : `<div class="card empty"><b>No pop-ups yet</b>Create one for an offer, a discount code or email sign-ups.</div>`;

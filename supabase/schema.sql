@@ -158,6 +158,9 @@ create table popups (
   updated_at timestamptz not null default now(),
   constraint popup_ends_after_start check (ends_at is null or starts_at is null or ends_at > starts_at)
 );
+-- Which pop-up an email sign-up came from. from_popup stays true after that pop-up is deleted.
+alter table subscribers add column popup_id bigint references popups(id) on delete set null,
+  add column from_popup boolean not null default false;
 
 -- Anonymous store activity for the Analytics tab: visits, product views, carts, checkouts, purchases and searches.
 -- A visitor is a random id kept in the browser and a session ends after 30 idle minutes. No names, emails or IP addresses.
@@ -392,11 +395,15 @@ create function current_theme() returns text language sql stable security define
   )
 $$;
 
-create function subscribe(p_email text) returns void language plpgsql security definer set search_path = public as $$
-declare v_email text := lower(left(btrim(coalesce(p_email, '')), 120));
+-- p_popup: the pop-up the sign-up came from, if any. An email already on the list keeps where it first came from.
+create function subscribe(p_email text, p_popup bigint default null) returns void language plpgsql security definer set search_path = public as $$
+declare
+  v_email text := lower(left(btrim(coalesce(p_email, '')), 120));
+  v_popup bigint;
 begin
   if v_email !~ '^[^\s@]+@[^\s@]+\.[^\s@]+$' then raise exception 'Please enter a valid email'; end if;
-  insert into subscribers (email) values (v_email) on conflict do nothing;
+  if p_popup is not null then select id into v_popup from popups where id = p_popup; end if;
+  insert into subscribers (email, popup_id, from_popup) values (v_email, v_popup, v_popup is not null) on conflict do nothing;
 end $$;
 
 -- ---------------------------------------------------------------- analytics
@@ -588,7 +595,28 @@ begin
         from session_rows(v_from, v_to) group by 1) h on h.k2 = k),
     'discounts', coalesce((select jsonb_agg(x order by x.orders desc) from (
         select discount_code code, count(*) orders, sum(total) revenue, sum(discount) discount from orders
-        where status <> 'cancelled' and discount_code is not null and created_at >= v_from and created_at < v_to group by discount_code) x), '[]')
+        where status <> 'cancelled' and discount_code is not null and created_at >= v_from and created_at < v_to group by discount_code) x), '[]'),
+    -- Orders: purchases in a visit where the pop-up was clicked (or signed up to) before buying.
+    'popups', coalesce((select jsonb_agg(x order by x.views desc, x.signups desc) from (
+        select p.id, p.title, p.kind, p.active,
+          (select count(*) from events e where e.popup_id = p.id and e.type = 'popup_view' and e.at >= v_from and e.at < v_to) views,
+          (select count(*) from events e where e.popup_id = p.id and e.type = 'popup_click' and e.at >= v_from and e.at < v_to) clicks,
+          (select count(*) from subscribers s where s.popup_id = p.id and s.created_at >= v_from and s.created_at < v_to) signups,
+          b.orders, b.revenue
+        from popups p cross join lateral (
+          select count(*) orders, coalesce(sum(e.value), 0) revenue from events e
+          where e.type = 'purchase' and e.at >= v_from and e.at < v_to
+            and exists (select 1 from events c where c.session = e.session and c.popup_id = p.id and c.type = 'popup_click' and c.at <= e.at)) b) x
+      where x.views + x.clicks + x.signups > 0), '[]'),
+    'signups', jsonb_build_object(
+      'total', (select count(*) from subscribers where created_at >= v_from and created_at < v_to),
+      'fromPopups', (select count(*) from subscribers where from_popup and created_at >= v_from and created_at < v_to),
+      'previousTotal', (select count(*) from subscribers where created_at >= v_prev and created_at < v_from),
+      'previousFromPopups', (select count(*) from subscribers where from_popup and created_at >= v_prev and created_at < v_from),
+      'allTime', (select count(*) from subscribers),
+      'recent', coalesce((select jsonb_agg(x order by x.created_at desc) from (
+        select s.email, s.created_at, p.title popup from subscribers s left join popups p on p.id = s.popup_id
+        where s.from_popup order by s.created_at desc limit 8) x), '[]'))
   );
 end $$;
 
@@ -601,6 +629,15 @@ begin
       coalesce(sum(o.total) filter (where o.status <> 'cancelled'), 0) spent,
       min(o.created_at) filter (where o.status <> 'cancelled') first_order, max(o.created_at) filter (where o.status <> 'cancelled') last_order
     from customers c left join orders o on o.customer_id = c.id group by c.id) x), '[]');
+end $$;
+
+-- The newsletter list, with where each email came from, for downloading.
+create function admin_subscribers_export() returns jsonb language plpgsql stable security definer set search_path = public as $$
+begin
+  perform require_admin();
+  return coalesce((select jsonb_agg(jsonb_build_object('email', s.email, 'created_at', s.created_at,
+      'source', case when s.from_popup then 'Pop-up' else 'Website form' end, 'popup', coalesce(p.title, case when s.from_popup then 'Deleted pop-up' end))
+    order by s.created_at desc) from subscribers s left join popups p on p.id = s.popup_id), '[]');
 end $$;
 
 -- ---------------------------------------------------------------- admin functions
@@ -792,6 +829,7 @@ begin
   return coalesce((select jsonb_agg(to_jsonb(p) || jsonb_build_object(
       'views', (select count(*) from events e where e.popup_id = p.id and e.type = 'popup_view' and e.at > now() - interval '30 days'),
       'clicks', (select count(*) from events e where e.popup_id = p.id and e.type = 'popup_click' and e.at > now() - interval '30 days'),
+      'signups', (select count(*) from subscribers s where s.popup_id = p.id and s.created_at > now() - interval '30 days'),
       'live', p.active and (p.starts_at is null or p.starts_at <= now()) and (p.ends_at is null or p.ends_at > now()))
     order by p.priority desc, p.id desc) from popups p), '[]');
 end $$;
@@ -1016,7 +1054,7 @@ grant select, insert, update, delete on discount_codes to authenticated;
 grant select, delete on theme_schedule to authenticated;
 grant usage on all sequences in schema public to authenticated;
 grant execute on function is_admin() to anon, authenticated;
-grant execute on function place_order(jsonb), subscribe(text) to anon, authenticated;
+grant execute on function place_order(jsonb), subscribe(text, bigint) to anon, authenticated;
 grant execute on function my_orders() to authenticated;
 grant execute on function preview_discount(text, jsonb) to anon, authenticated;
 grant execute on function current_theme() to anon, authenticated;
@@ -1024,7 +1062,7 @@ grant execute on function track(jsonb) to anon, authenticated;
 grant execute on function admin_add_theme_schedule(text, text, text) to authenticated;
 grant execute on function admin_analytics(), admin_list_products(), admin_list_orders(text, text, integer), admin_get_order(bigint),
   admin_set_order_status(bigint, text), admin_set_theme(text), admin_list_customers(text, text, integer), admin_get_customer(bigint), admin_import_sheet(jsonb), admin_set_hero(jsonb),
-  admin_marketing(integer), admin_customers_export(), admin_save_popup(jsonb), admin_set_popup_active(bigint, boolean), admin_list_popups() to authenticated;
+  admin_marketing(integer), admin_customers_export(), admin_save_popup(jsonb), admin_set_popup_active(bigint, boolean), admin_list_popups(), admin_subscribers_export() to authenticated;
 
 -- ---------------------------------------------------------------- live notifications
 alter publication supabase_realtime add table notifications;

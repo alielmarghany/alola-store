@@ -106,7 +106,7 @@
     if (form) form.onsubmit = async e => {
       e.preventDefault();
       if (isPreview) { A.toast(ar() ? 'معاينة: لم يتم الاشتراك' : 'Preview: no sign-up was saved'); return; }
-      try { await A.subscribe(form.querySelector('input').value); track('popup_click'); close(); A.toast(ar() ? 'تم اشتراكك' : 'You’re on the glow list'); }
+      try { await A.subscribe(form.querySelector('input').value, p.id); track('popup_click'); close(); A.toast(ar() ? 'تم اشتراكك' : 'You’re on the glow list'); }
       catch (err) { A.toast(err.message); }
     };
   }

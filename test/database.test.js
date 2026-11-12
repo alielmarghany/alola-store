@@ -591,6 +591,25 @@ test('pop-ups: admins set them up, shoppers see only live ones, views and clicks
   assert.equal(row.views, 1); assert.equal(row.clicks, 1); assert.equal(row.live, true);
   assert.equal(list.find(x => x.id === later.id).live, false);
   await assert.rejects(stranger('select admin_list_popups()'), /Not authorised/);
+  // Sign-ups from a pop-up are credited to it; a made-up pop-up id is ignored; an email already on the list keeps its source.
+  await db.query('delete from subscribers');
+  await anon('select subscribe($1, $2)', ['Pop@Test.local', live.id]);
+  await anon('select subscribe($1, $2)', ['ghost@test.local', 999999]);
+  await anon("select subscribe('footer@test.local')");
+  await anon('select subscribe($1, $2)', ['footer@test.local', live.id]);
+  // A purchase after clicking the pop-up, in the same visit, counts as an order from it.
+  const o = (await db.query('select id, total from orders order by id desc limit 1')).rows[0];
+  await db.query("insert into events (visitor, session, type, order_id, value, at) values ('visitor0009', 'session0009', 'purchase', $1, $2, now() + interval '1 second')", [o.id, o.total]);
+  assert.equal((await one(admin('select admin_list_popups() r'))).r.find(x => x.id === live.id).signups, 1);
+  const m = (await one(admin('select admin_marketing(30) r'))).r;
+  const pm = m.popups.find(x => x.id === live.id);
+  assert.deepEqual([pm.views, pm.clicks, pm.signups, pm.orders, pm.revenue], [1, 1, 1, 1, o.total]);
+  assert.equal(m.signups.total, 3); assert.equal(m.signups.fromPopups, 1);
+  assert.deepEqual(m.signups.recent.map(r => [r.email, r.popup]), [['pop@test.local', 'Eid sale']]);
+  const ex = (await one(admin('select admin_subscribers_export() r'))).r;
+  assert.deepEqual(ex.map(r => r.source).sort(), ['Pop-up', 'Website form', 'Website form']);
+  await assert.rejects(stranger('select admin_subscribers_export()'), /Not authorised/);
+  await assert.rejects(anon('select admin_subscribers_export()'), /permission denied/);
   assert.equal((await stranger('delete from popups where id = $1 returning id', [live.id])).length, 0);
   assert.equal((await admin('delete from popups returning id')).length, 3);
   await db.query('delete from events');
