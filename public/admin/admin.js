@@ -37,6 +37,7 @@
     themes: SVG('<path d="M12 3a9 9 0 1 0 0 18c1.500 0 2-1 2-2 0-1.500-1-2-1-3 0-1 1-2 2-2h2a4 4 0 0 0 4-4c0-4-4-7-9-7z"/><circle cx="7.500" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/>'),
     store: SVG('<path d="M3 10v10h18V10M2 10l2-6h16l2 6zM9 20v-6h6v6"/>'),
     translate: SVG('<path d="M4 5h9M8.5 3v2M6 5c.6 3 2.6 5.4 5 6.5M11 5c-.6 3-2.8 5.6-6 7M13 21l4-9 4 9M14.4 18h5.2"/>'),
+    truck: SVG('<path d="M2 6h11v10H2zM13 9h4l4 4v3h-8"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>'),
     print: SVG('<path d="M7 9V3h10v6M7 18H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 14h10v7H7z"/>'),
     more: SVG('<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'),
     out: SVG('<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h10"/>'),
@@ -688,8 +689,8 @@
   async function viewOrders(el, token, freshId) {
     if (!$('#oq', el)) {
       el.innerHTML = `<div class="bar"><input class="in grow" id="oq" type="search" placeholder="Search name, email, phone or order number" aria-label="Search orders" value="${esc(ordersState.q)}">
-        <select class="in" id="ost" aria-label="Filter by status"><option value="">All statuses</option>${STATUSES.map(s => `<option value="${s}" ${ordersState.status === s ? 'selected' : ''}>${cap(s)}</option>`).join('')}</select><div style="flex:1"></div><button class="btn ln rc-chip" id="rcSet"></button></div><div id="olist"><div class="skeleton" style="height:360px"></div></div>`;
-      drawPrintChip(); $('#rcSet').onclick = openPrintSettings;
+        <select class="in" id="ost" aria-label="Filter by status"><option value="">All statuses</option>${STATUSES.map(s => `<option value="${s}" ${ordersState.status === s ? 'selected' : ''}>${cap(s)}</option>`).join('')}</select><div style="flex:1"></div><button class="btn ln" id="pxSet">${I.truck} PostEx</button><button class="btn ln rc-chip" id="rcSet"></button></div><div id="olist"><div class="skeleton" style="height:360px"></div></div>`;
+      drawPrintChip(); $('#rcSet').onclick = openPrintSettings; $('#pxSet').onclick = openPostex;
       $('#oq').oninput = debounce(e => { ordersState.q = e.target.value; ordersState.page = 1; viewOrders(el, viewToken); });
       $('#ost').onchange = e => { ordersState.status = e.target.value; ordersState.page = 1; viewOrders(el, viewToken); };
     }
@@ -783,6 +784,26 @@
       drawPrintChip();
     };
     $('#rcTest', dr).onclick = () => printReceipt(SAMPLE_ORDER);
+  }
+  function openPostex() {
+    const dr = openDrawer(`<div class="dr-h"><h2>PostEx shipping</h2>${closeBtn}</div>
+      <div class="card"><h2>Connection</h2>
+        <p class="note">The PostEx login is kept in Supabase, not in the website. This checks that PostEx accepts it.</p>
+        <button type="button" class="btn" id="pxTest" style="margin-top:10px">${I.truck} Test connection</button>
+        <div id="pxOut" style="margin-top:12px" aria-live="polite"></div></div>`);
+    const out = $('#pxOut', dr), btn = $('#pxTest', dr);
+    btn.onclick = async () => {
+      btn.disabled = true; out.innerHTML = '<div class="skeleton" style="height:80px"></div>';
+      try {
+        const r = await db.postex('test');
+        if (!r.ok) { out.innerHTML = `<p class="note" style="color:var(--rose)"><b>Not connected.</b> ${esc(r.message || '')}</p>`; return; }
+        const g = r.governorates || [];
+        out.innerHTML = `<p><b style="color:var(--olive)">Connected.</b> PostEx delivers to ${r.areas} areas in ${g.length} governorates.</p>
+          ${r.prices ? `<p class="note">Delivery prices on your account: ${fmt(r.prices.min)} to ${fmt(r.prices.max)} (${r.prices.count} areas priced).</p>` : `<p class="note">No delivery prices came back${r.pricesError ? `: ${esc(r.pricesError)}` : ''}.</p>`}
+          <div class="rows" style="margin-top:8px">${g.slice(0, 30).map(x => `<div class="rw"><span>${esc(x.name)}</span><span class="num">${x.areas} areas</span></div>`).join('')}</div>`;
+      } catch (e) { out.innerHTML = ''; fail(e); }
+      finally { btn.disabled = false; }
+    };
   }
   function drawPrintChip() {
     const b = $('#rcSet'); if (!b) return;

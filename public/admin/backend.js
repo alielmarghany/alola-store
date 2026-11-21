@@ -157,6 +157,15 @@ window.AdminDB = (function () {
     },
     customersExport: () => rpc('admin_customers_export'),
     subscribersExport: () => rpc('admin_subscribers_export'),
+    postex: async (action, body = {}) => {
+      const { data, error } = await sb.functions.invoke('postex', { body: { action, ...body } });
+      if (error) {
+        if (error.context?.status === 401) { onUnauthorized(); throw Object.assign(new Error('Please log in'), { handled: true }); }
+        const msg = await error.context?.json?.().then(j => j.message || j.error).catch(() => null);
+        throw new Error(msg || 'Couldn’t reach the PostEx link');
+      }
+      return data;
+    },
     orders: ({ q = '', status = '', page = 1 } = {}) => rpc('admin_list_orders', { p_q: q, p_status: status, p_page: page }),
     order: id => rpc('admin_get_order', { p_id: id }),
     setOrderStatus: (id, status) => rpc('admin_set_order_status', { p_id: id, p_status: status }),
