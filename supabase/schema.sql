@@ -53,6 +53,8 @@ create table orders (
   user_id uuid references auth.users(id) on delete set null, -- the customer account, if logged in
   discount integer not null default 0 check (discount >= 0),
   discount_code text,
+  area_id integer, -- PostEx sector id
+  area text not null default '',
   created_at timestamptz not null default now(),
   -- "Revenue per day" follows Cairo days, wherever the database runs.
   local_day date generated always as ((created_at at time zone 'Africa/Cairo')::date) stored
@@ -87,6 +89,7 @@ create table customer_profiles (
   phone text not null default '' check (char_length(phone) <= 20),
   city text not null default '' check (char_length(city) <= 60),
   address text not null default '' check (char_length(address) <= 300),
+  area_id integer,
   updated_at timestamptz not null default now()
 );
 
@@ -120,6 +123,18 @@ create table store_settings (
   hero jsonb -- the home page's three hero boxes as set in the dashboard; empty means the built-in design
 );
 insert into store_settings default values;
+
+-- PostEx's delivery areas and its price for each, copied from PostEx by the dashboard (Orders > PostEx).
+-- id is PostEx's sector id. An area without a price uses store_settings.shipping_fee.
+-- While this table is empty, checkout asks for the governorate only and uses shipping_fee.
+create table ship_areas (
+  id integer primary key,
+  name text not null,
+  gov_id integer not null,
+  gov_name text not null,
+  price integer check (price is null or price >= 0),
+  updated_at timestamptz not null default now()
+);
 
 -- Each brand's logo, shown in the home page's brands section. Brands without one show their name.
 create table brand_logos (
@@ -237,6 +252,13 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------- public functions
+-- Delivery for an order: free over the store's limit, otherwise PostEx's price for the area.
+create function shipping_for(p_subtotal integer, p_area integer) returns integer language sql stable set search_path = public as $$
+  select case when p_subtotal >= s.free_shipping_over then 0
+    else coalesce((select a.price from ship_areas a where a.id = p_area), s.shipping_fee) end
+  from store_settings s
+$$;
+
 create function place_order(payload jsonb) returns jsonb language plpgsql security definer set search_path = public as $$
 declare
   v_name text := left(btrim(coalesce(payload->>'name', '')), 80);
@@ -255,13 +277,14 @@ declare
   v_count integer := 0;
   v_shipping integer;
   v_total integer;
-  v_settings store_settings;
   v_customer bigint;
   v_order bigint;
   v_user uuid := auth.uid();
   v_code text := upper(btrim(coalesce(payload->>'code', '')));
   v_applied jsonb;
   v_discount integer := 0;
+  v_area_id text := btrim(coalesce(payload->>'area', ''));
+  v_area ship_areas;
 begin
   -- Logged-in orders always use the account's own email.
   if v_user is not null then select lower(email) into v_email from auth.users where id = v_user; end if;
@@ -277,6 +300,12 @@ begin
   if char_length(v_name) < 2 then v_fields := v_fields || '{"name":"Please enter your full name"}'; end if;
   if v_phone !~ '^\+?[0-9][0-9 ()-]{6,18}$' then v_fields := v_fields || '{"phone":"Please enter a valid phone number"}'; end if;
   if v_email !~ '^[^\s@]+@[^\s@]+\.[^\s@]+$' then v_fields := v_fields || '{"email":"Please enter a valid email"}'; end if;
+  -- Once PostEx areas are loaded, the area is required and sets the governorate.
+  if exists (select 1 from ship_areas) then
+    if v_area_id ~ '^[0-9]{1,9}$' then select * into v_area from ship_areas where id = v_area_id::int; end if;
+    if v_area.id is null then v_fields := v_fields || '{"area":"Please choose your area"}';
+    else v_city := v_area.gov_name; end if;
+  end if;
   if char_length(v_city) < 2 then v_fields := v_fields || '{"city":"Please choose your governorate"}'; end if;
   if char_length(v_address) < 5 then v_fields := v_fields || '{"address":"Please enter your full address"}'; end if;
   if v_fields <> '{}' then raise exception 'Please check your details' using detail = v_fields::text; end if;
@@ -308,8 +337,7 @@ begin
     update products set stock = stock - v_line.qty where id = v_line.id;
   end loop;
 
-  select * into v_settings from store_settings;
-  v_shipping := case when v_subtotal >= v_settings.free_shipping_over then 0 else v_settings.shipping_fee end;
+  v_shipping := shipping_for(v_subtotal, v_area.id);
 
   -- The code is checked here, with the row locked, so its limit can't be passed by two orders at once.
   if v_code <> '' then
@@ -325,8 +353,8 @@ begin
   on conflict (email) do update set name = excluded.name, phone = excluded.phone, city = excluded.city, address = excluded.address
   returning id into v_customer;
 
-  insert into orders (customer_id, customer_name, email, phone, city, address, notes, subtotal, shipping, total, user_id, discount, discount_code)
-  values (v_customer, v_name, v_email, v_phone, v_city, v_address, v_notes, v_subtotal, v_shipping, v_total, v_user, v_discount, nullif(v_code, ''))
+  insert into orders (customer_id, customer_name, email, phone, city, address, notes, subtotal, shipping, total, user_id, discount, discount_code, area_id, area)
+  values (v_customer, v_name, v_email, v_phone, v_city, v_address, v_notes, v_subtotal, v_shipping, v_total, v_user, v_discount, nullif(v_code, ''), v_area.id, coalesce(v_area.name, ''))
   returning id into v_order;
 
   insert into order_items (order_id, product_id, name, brand, price, qty)
@@ -338,20 +366,19 @@ begin
     v_name || ' · ' || v_count || case when v_count = 1 then ' item' else ' items' end || ' · ' || to_char(v_total, 'FM999,999,990') || ' EGP', v_order);
 
   if v_user is not null and payload->>'save' = 'true' then
-    insert into customer_profiles (user_id, name, phone, city, address) values (v_user, v_name, v_phone, v_city, v_address)
-    on conflict (user_id) do update set name = excluded.name, phone = excluded.phone, city = excluded.city, address = excluded.address, updated_at = now();
+    insert into customer_profiles (user_id, name, phone, city, address, area_id) values (v_user, v_name, v_phone, v_city, v_address, v_area.id)
+    on conflict (user_id) do update set name = excluded.name, phone = excluded.phone, city = excluded.city, address = excluded.address, area_id = excluded.area_id, updated_at = now();
   end if;
 
   return jsonb_build_object('number', order_number(v_order), 'total', v_total, 'subtotal', v_subtotal, 'shipping', v_shipping, 'discount', v_discount, 'discount_code', nullif(v_code, ''),
-    'name', v_name, 'city', v_city, 'items', v_lines);
+    'name', v_name, 'city', v_city, 'area', coalesce(v_area.name, ''), 'items', v_lines);
 end $$;
 
 -- Lets checkout show the discount before the order is placed. place_order checks it again.
-create function preview_discount(p_code text, p_items jsonb) returns jsonb language plpgsql security definer set search_path = public as $$
+create function preview_discount(p_code text, p_items jsonb, p_area integer default null) returns jsonb language plpgsql security definer set search_path = public as $$
 declare
   v_code text := upper(btrim(coalesce(p_code, '')));
   v_ip text := md5('code:' || coalesce(split_part(nullif(current_setting('request.headers', true), '')::json->>'x-forwarded-for', ',', 1), 'unknown'));
-  v_settings store_settings;
   v_subtotal integer;
   v_shipping integer;
   v_applied jsonb;
@@ -369,8 +396,7 @@ begin
   end if;
   select coalesce(sum(p.price * (i->>'qty')::int), 0)::int into v_subtotal
     from jsonb_array_elements(p_items) i join products p on p.id = (i->>'id')::bigint and p.active;
-  select * into v_settings from store_settings;
-  v_shipping := case when v_subtotal >= v_settings.free_shipping_over then 0 else v_settings.shipping_fee end;
+  v_shipping := shipping_for(v_subtotal, p_area);
   v_applied := apply_discount(v_code, v_subtotal, v_shipping, false);
   if v_applied ? 'error' then return v_applied; end if;
   return v_applied || jsonb_build_object('subtotal', v_subtotal,
@@ -999,6 +1025,32 @@ begin
   return to_jsonb(c) || jsonb_build_object('orders', coalesce((select jsonb_agg(order_json(o) || jsonb_build_object('item_count', (select sum(qty) from order_items where order_id = o.id)) order by o.id desc) from orders o where o.customer_id = p_id), '[]'));
 end $$;
 
+-- Replaces the delivery areas with the list the PostEx function just fetched. Areas PostEx dropped are removed.
+create function admin_set_ship_areas(p_areas jsonb) returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  perform require_admin();
+  if jsonb_typeof(p_areas) <> 'array' then raise exception 'No areas received from PostEx'; end if;
+  if not exists (select 1 from jsonb_array_elements(p_areas) a where a->>'id' ~ '^[0-9]{1,9}$' and coalesce(a->>'gov_id', '') ~ '^[0-9]{1,9}$'
+      and btrim(coalesce(a->>'name', '')) <> '' and btrim(coalesce(a->>'gov_name', '')) <> '') then
+    raise exception 'No areas received from PostEx';
+  end if;
+  with n as (
+    select distinct on ((a->>'id')::int) (a->>'id')::int id, left(btrim(a->>'name'), 120) name, (a->>'gov_id')::int gov_id, left(btrim(a->>'gov_name'), 60) gov_name,
+      case when a->>'price' ~ '^[0-9]{1,6}$' then (a->>'price')::int end price
+    from jsonb_array_elements(p_areas) a
+    where a->>'id' ~ '^[0-9]{1,9}$' and coalesce(a->>'gov_id', '') ~ '^[0-9]{1,9}$'
+      and btrim(coalesce(a->>'name', '')) <> '' and btrim(coalesce(a->>'gov_name', '')) <> ''
+    order by (a->>'id')::int
+  ), gone as (
+    delete from ship_areas where id not in (select id from n) returning id
+  )
+  insert into ship_areas (id, name, gov_id, gov_name, price, updated_at)
+  select id, name, gov_id, gov_name, price, now() from n
+  on conflict (id) do update set name = excluded.name, gov_id = excluded.gov_id, gov_name = excluded.gov_name, price = excluded.price, updated_at = now();
+  return jsonb_build_object('areas', (select count(*) from ship_areas), 'priced', (select count(*) from ship_areas where price is not null),
+    'governorates', (select count(distinct gov_id) from ship_areas));
+end $$;
+
 -- ---------------------------------------------------------------- access rules
 alter table products enable row level security;
 alter table customers enable row level security;
@@ -1014,6 +1066,7 @@ alter table discount_codes enable row level security;
 alter table theme_schedule enable row level security;
 alter table brand_logos enable row level security;
 alter table events enable row level security;
+alter table ship_areas enable row level security;
 alter table popups enable row level security; -- no policies: written by track(), read by admin_marketing()
 
 create policy "Live products are public" on products for select to anon, authenticated using (active or is_admin());
@@ -1037,13 +1090,14 @@ create policy "Admins remove brand logos" on brand_logos for delete to authentic
 create policy "Admins read notifications" on notifications for select to authenticated using (is_admin());
 create policy "Admins mark notifications read" on notifications for update to authenticated using (is_admin()) with check (is_admin());
 create policy "Customers read their own details" on customer_profiles for select to authenticated using (user_id = auth.uid());
+create policy "Delivery areas are public" on ship_areas for select to anon, authenticated using (true);
 create policy "Customers add their own details" on customer_profiles for insert to authenticated with check (user_id = auth.uid());
 create policy "Customers edit their own details" on customer_profiles for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 -- customers, orders, order_items, subscribers, order_attempts and admins have no policies: functions only.
 
 revoke all on all tables in schema public from anon, authenticated;
 revoke all on all functions in schema public from public, anon, authenticated;
-grant select on products, store_settings, brand_logos to anon, authenticated;
+grant select on products, store_settings, brand_logos, ship_areas to anon, authenticated;
 grant insert, update, delete on brand_logos to authenticated;
 grant select on popups to anon, authenticated;
 grant delete on popups to authenticated;
@@ -1056,13 +1110,13 @@ grant usage on all sequences in schema public to authenticated;
 grant execute on function is_admin() to anon, authenticated;
 grant execute on function place_order(jsonb), subscribe(text, bigint) to anon, authenticated;
 grant execute on function my_orders() to authenticated;
-grant execute on function preview_discount(text, jsonb) to anon, authenticated;
+grant execute on function preview_discount(text, jsonb, integer) to anon, authenticated;
 grant execute on function current_theme() to anon, authenticated;
 grant execute on function track(jsonb) to anon, authenticated;
 grant execute on function admin_add_theme_schedule(text, text, text) to authenticated;
 grant execute on function admin_analytics(), admin_list_products(), admin_list_orders(text, text, integer), admin_get_order(bigint),
   admin_set_order_status(bigint, text), admin_set_theme(text), admin_list_customers(text, text, integer), admin_get_customer(bigint), admin_import_sheet(jsonb), admin_set_hero(jsonb),
-  admin_marketing(integer), admin_customers_export(), admin_save_popup(jsonb), admin_set_popup_active(bigint, boolean), admin_list_popups(), admin_subscribers_export() to authenticated;
+  admin_marketing(integer), admin_customers_export(), admin_save_popup(jsonb), admin_set_popup_active(bigint, boolean), admin_list_popups(), admin_subscribers_export(), admin_set_ship_areas(jsonb) to authenticated;
 
 -- ---------------------------------------------------------------- live notifications
 alter publication supabase_realtime add table notifications;

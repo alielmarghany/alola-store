@@ -4,9 +4,9 @@
   A.mountChrome('checkout');
   const root = $('#co');
   const GOVS = A.GOVERNORATES;
-  let cfg, user = null, saved = null;
+  let cfg, user = null, saved = null, areaList = [];
   try {
-    cfg = await A.config(); await A.products();
+    [cfg, , areaList] = await Promise.all([A.config(), A.products(), A.areas()]);
     // Accounts are optional: if they can't load, guest checkout still works.
     try { user = await Acc.user(); if (user) saved = await Acc.profile(); } catch { user = null; saved = null; }
   }
@@ -19,25 +19,29 @@
   let appliedCode = null;
   const cartItems = lines => lines.map(l => ({ id: l.p.id, qty: l.qty }));
   let summaryRun = 0;
+  // With PostEx areas loaded, delivery is PostEx's price for the chosen area (null until one is chosen).
+  const useAreas = areaList.length > 0;
+  let area = useAreas ? null : undefined;
 
   async function renderSummary() {
     const box = $('#summary'); if (!box) return;
     const run = ++summaryRun;
-    const lines = await A.cartLines(), t = A.totals(lines, cfg);
+    const lines = await A.cartLines(), t = A.totals(lines, cfg, area);
     if (!lines.length) return renderEmpty();
     let discount = 0;
     if (appliedCode) {
       let d;
-      try { d = await Acc.previewDiscount(appliedCode, cartItems(lines)); }
+      try { d = await Acc.previewDiscount(appliedCode, cartItems(lines), area?.id); }
       catch (err) { d = { error: err.message }; }
       if (run !== summaryRun) return; // a newer update has taken over
       if (d.error) { appliedCode = null; renderCode(d.error); }
+      else if (t.shipping === null && d.shipping) { discount = d.discount; t.subtotal = d.subtotal; t.total = d.subtotal - d.discount; } // area not chosen yet
       else { discount = d.discount; t.shipping = d.shipping; t.total = d.total; t.subtotal = d.subtotal; }
     }
     box.innerHTML = `${lines.map(({ p, qty }) => `<div class="ci"><div class="thumb ph-${esc(p.category)}">${media(p)}</div><div class="ci-m"><b>${esc(A.pname(p))}</b><small>${esc(p.brand)} · ${qty} × ${fmt(p.price)}</small></div><b>${fmt(p.price * qty)}</b></div>`).join('')}
       <div style="height:12px"></div><div class="tot"><span>Subtotal</span><span>${fmt(t.subtotal)}</span></div>
       ${discount ? `<div class="tot disc"><span>Discount (${esc(appliedCode)})</span><span>−${fmt(discount)}</span></div>` : ''}
-      <div class="tot"><span>Delivery</span><span>${t.shipping ? fmt(t.shipping) : 'Free'}</span></div>
+      <div class="tot"><span>Delivery</span><span>${t.shipping === null ? 'Choose your area' : t.shipping ? fmt(t.shipping) : 'Free'}</span></div>
       <div class="tot g"><span>Total</span><span>${fmt(t.total)}</span></div>`;
     $('#placeBtn').textContent = `Place order · ${fmt(t.total)}`;
   }
@@ -58,7 +62,8 @@
           <div class="f2">${field('phone', 'Phone', inp('phone', 'tel', 'tel', 'required placeholder="01X XXXX XXXX"', saved?.phone))}${field('email', 'Email', inp('email', 'email', 'email', user ? 'required readonly' : 'required', user?.email))}</div>
         </div>
         <div class="panel"><h2>Delivery</h2>
-          ${field('city', 'Governorate', `<select class="in" id="city" name="city" required autocomplete="address-level1"><option value="">Choose…</option>${GOVS.map(g => `<option value="${g}" ${g === saved?.city ? 'selected' : ''}>${g}</option>`).join('')}</select>`)}
+          ${useAreas ? `<div class="f2">${A.areaFields(areaList, saved || {})}</div>`
+            : field('city', 'Governorate', `<select class="in" id="city" name="city" required autocomplete="address-level1"><option value="">Choose…</option>${GOVS.map(g => `<option value="${g}" ${g === saved?.city ? 'selected' : ''}>${g}</option>`).join('')}</select>`)}
           ${field('address', 'Address', `<textarea class="in" id="address" name="address" required autocomplete="street-address" placeholder="Street, building, floor, apartment">${esc(saved?.address)}</textarea>`)}
           ${field('notes', 'Notes (optional)', `<textarea class="in" id="notes" name="notes" style="min-height:60px" placeholder="Anything the courier should know"></textarea>`)}
           ${user ? `<label class="chk"><input type="checkbox" name="save" checked> Save these details for next time</label>` : ''}
@@ -89,13 +94,17 @@
       } catch (err) { renderCode(err.message); }
     };
   }
+  if (useAreas) {
+    const chosen = A.wireAreas(areaList, a => { area = a; renderSummary(); });
+    area = chosen();
+  }
   renderCode();
   await renderSummary();
   document.addEventListener('alola:cart', () => { renderSummary(); });
 
   const form = $('#form');
   function showErrors(fields = {}) {
-    for (const id of ['name', 'phone', 'email', 'city', 'address']) {
+    for (const id of ['name', 'phone', 'email', 'city', ...(useAreas ? ['area'] : []), 'address']) {
       $(`#f-${id}`).classList.toggle('bad', !!fields[id]);
       $(`#e-${id}`).textContent = fields[id] || '';
       $(`#${id}`).setAttribute('aria-invalid', !!fields[id]);
@@ -130,7 +139,7 @@
     root.innerHTML = `<div class="done">
       <div class="wr">${alolaWreath({ leaves: 26, a: '#7d8f5e', b: '#a3b585', stem: '#a3b585' })}<div class="tick"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div></div>
       <h1>Thank you, <em>${first}</em></h1>
-      <p>Your order is in. We’ll call you to confirm, then it’s on its way to ${esc(o.city)}. Pay ${fmt(o.total)} in cash on delivery.</p>
+      <p>Your order is in. We’ll call you to confirm, then it’s on its way to ${esc(o.area ? `${o.area}, ${o.city}` : o.city)}. Pay ${fmt(o.total)} in cash on delivery.</p>
       ${o.discount_code ? `<p>Discount code ${esc(o.discount_code)} applied.</p>` : ''}
       <div class="num">Order ${esc(o.number)}</div><br>
       <a class="btn dk" href="shop.html">Keep shopping</a>

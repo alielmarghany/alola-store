@@ -112,7 +112,7 @@ window.T = (function () {
 
     // checkout
     'Keep shopping': 'متابعة التسوق', 'Check<em>out</em>': 'إتمام <em>الطلب</em>', 'Your details': 'بياناتك', 'Full name': 'الاسم بالكامل', 'Phone': 'الهاتف', 'Email': 'البريد الإلكتروني',
-    'Governorate': 'المحافظة', 'Address': 'العنوان', 'Notes (optional)': 'ملاحظات (اختياري)', 'Choose…': 'اختاري…', 'Payment': 'الدفع',
+    'Governorate': 'المحافظة', 'Area': 'المنطقة', 'Choose your governorate first': 'اختاري المحافظة الأول', 'Choose your area': 'اختاري منطقتك', 'At checkout': 'عند إتمام الطلب', 'Please choose your area': 'من فضلك اختاري منطقتك', 'Address': 'العنوان', 'Notes (optional)': 'ملاحظات (اختياري)', 'Choose…': 'اختاري…', 'Payment': 'الدفع',
     'Street, building, floor, apartment': 'الشارع، العمارة، الدور، الشقة', 'Anything the courier should know': 'أي معلومة لمندوب التوصيل',
     'Pay the courier when your order arrives.': 'ادفعي للمندوب عند وصول طلبك.', 'Your order': 'طلبك', 'Place order': 'تأكيد الطلب', 'Placing your order…': 'جارٍ تأكيد طلبك…',
     'Have an account?': 'لديك حساب؟', 'Log in': 'تسجيل الدخول', 'to use your saved details, or': 'لاستخدام بياناتك المحفوظة، أو', 'create one': 'أنشئي حسابًا',

@@ -157,6 +157,15 @@ window.AdminDB = (function () {
     },
     customersExport: () => rpc('admin_customers_export'),
     subscribersExport: () => rpc('admin_subscribers_export'),
+    shipAreaStatus: async () => {
+      const [all, priced, last] = await Promise.all([
+        sb.from('ship_areas').select('id', { count: 'exact', head: true }),
+        sb.from('ship_areas').select('id', { count: 'exact', head: true }).not('price', 'is', null),
+        sb.from('ship_areas').select('updated_at').order('updated_at', { ascending: false }).limit(1),
+      ]);
+      check(all.error || priced.error || last.error);
+      return { areas: all.count || 0, priced: priced.count || 0, updated: last.data?.[0]?.updated_at || null };
+    },
     postex: async (action, body = {}) => {
       const { data, error } = await sb.functions.invoke('postex', { body: { action, ...body } });
       if (error) {

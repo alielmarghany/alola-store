@@ -89,8 +89,8 @@
     const user = await Acc.user();
     if (!user) return renderAuth();
     root.innerHTML = '<div class="empty">Loading your account…</div>';
-    let profile, orders, cfgGovs;
-    try { [profile, orders] = await Promise.all([Acc.profile(), Acc.myOrders()]); }
+    let profile, orders, cfgGovs, areaList = [];
+    try { [profile, orders, areaList] = await Promise.all([Acc.profile(), Acc.myOrders(), A.areas()]); }
     catch { root.innerHTML = '<div class="empty"><h3>Your account could not load</h3><p>Please refresh the page.</p></div>'; return; }
     if (recovering) return; // a password reset link opened meanwhile: keep its form on screen
     cfgGovs = A.GOVERNORATES;
@@ -103,17 +103,19 @@
           <form class="panel" id="pf" novalidate><h2>My details</h2><p class="sub" style="margin-bottom:12px">We’ll fill these in for you at checkout.</p>
             ${fld('name', 'Full name', `autocomplete="name" value="${esc(profile.name)}"`)}
             ${fld('phone', 'Phone', `type="tel" autocomplete="tel" placeholder="01X XXXX XXXX" value="${esc(profile.phone)}"`)}
-            <div class="fld" id="f-city"><label for="city">Governorate</label><select class="in" id="city" autocomplete="address-level1"><option value="">Choose…</option>${cfgGovs.map(g => `<option value="${g}" ${g === profile.city ? 'selected' : ''}>${g}</option>`).join('')}</select><div class="err" id="e-city"></div></div>
+            ${areaList.length ? A.areaFields(areaList, profile) : `<div class="fld" id="f-city"><label for="city">Governorate</label><select class="in" id="city" autocomplete="address-level1"><option value="">Choose…</option>${cfgGovs.map(g => `<option value="${g}" ${g === profile.city ? 'selected' : ''}>${g}</option>`).join('')}</select><div class="err" id="e-city"></div></div>`}
             <div class="fld" id="f-address"><label for="address">Delivery address</label><textarea class="in" id="address" autocomplete="street-address" placeholder="Street, building, floor, apartment">${esc(profile.address)}</textarea><div class="err" id="e-address"></div></div>
             <button class="btn dk" style="width:100%" id="saveP">Save details</button></form>
           <form class="panel" id="pw" novalidate><h2>Change password</h2>${fld('password', 'New password', 'type="password" autocomplete="new-password"', 'At least 8 characters')}<button class="btn ln" style="width:100%" id="saveW">Update password</button></form>
         </aside>
       </div>`;
 
+    const chosenArea = areaList.length ? A.wireAreas(areaList) : null;
     $('#logout').onclick = async () => { await Acc.signOut().catch(() => {}); A.toast('Logged out'); renderAuth(); };
     $('#pf').onsubmit = async e => {
       e.preventDefault();
       const p = { name: $('#name').value.trim(), phone: $('#phone').value.trim(), city: $('#city').value, address: $('#address').value.trim() };
+      if (chosenArea) p.area_id = chosenArea()?.id ?? null;
       const errs = {};
       if (p.name.length < 2) errs.name = 'Please enter your full name';
       if (p.phone && !/^\+?[0-9][0-9 ()-]{6,18}$/.test(p.phone)) errs.phone = 'Please enter a valid phone number';
@@ -141,7 +143,7 @@
     return `<article class="ord"><div class="ord-h"><div><b>${esc(o.number)}</b><small>${dateFmt.format(new Date(o.created_at))}</small></div><span class="st st-${esc(o.status)}">${STATUS[o.status] || esc(o.status)}</span></div>
       ${o.items.map(i => `<div class="ord-i"><span>${esc((T.ar && i.name_ar) || i.name)}<small>${esc(i.brand)} · ${i.qty} × ${fmt(i.price)}</small></span><span>${fmt(i.qty * i.price)}</span></div>`).join('')}
       ${o.discount ? `<div class="ord-i disc"><span>Discount (${esc(o.discount_code)})</span><span>−${fmt(o.discount)}</span></div>` : ''}
-      <div class="ord-t"><span>Delivery to ${esc(o.city)}: ${o.shipping ? fmt(o.shipping) : 'Free'}</span><b>${fmt(o.total)}</b></div></article>`;
+      <div class="ord-t"><span>Delivery to ${esc(o.area ? `${o.area}, ${o.city}` : o.city)}: ${o.shipping ? fmt(o.shipping) : 'Free'}</span><b>${fmt(o.total)}</b></div></article>`;
   }
 
   // -------------------------------------------------- start

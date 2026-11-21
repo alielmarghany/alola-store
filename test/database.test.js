@@ -649,3 +649,43 @@ test('customers see Arabic product names in their order history', async () => {
   assert.equal(newest.items[0].name, 'Anua Niacinamide Serum');
   assert.equal(newest.items[0].name_ar, 'أنوا سيروم نياسيناميد');
 });
+
+test('PostEx areas: admins load them, checkout needs one, and delivery follows its price', async () => {
+  await db.query('delete from order_attempts');
+  const areas = [
+    { id: '105', name: 'الأزبكية', gov_id: '29', gov_name: 'القاهرة', price: '75' },
+    { id: '200', name: 'الدقي', gov_id: '30', gov_name: 'الجيزة', price: '' }, // no PostEx price: the store fee
+    { id: 'x', name: 'Bad', gov_id: '1', gov_name: 'Bad' },
+  ];
+  await assert.rejects(anon('select admin_set_ship_areas($1::jsonb)', [JSON.stringify(areas)]));
+  await assert.rejects(stranger('select admin_set_ship_areas($1::jsonb)', [JSON.stringify(areas)]), /Not authorised/);
+  await assert.rejects(admin("select admin_set_ship_areas('[]'::jsonb)"), /No areas/);
+  const r = (await one(admin('select admin_set_ship_areas($1::jsonb) r', [JSON.stringify(areas)]))).r;
+  assert.deepEqual(r, { areas: 2, priced: 1, governorates: 2 });
+  assert.equal((await anon('select * from ship_areas')).length, 2, 'shoppers can read the areas');
+  await assert.rejects(anon("insert into ship_areas values (1, 'x', 1, 'x', 1)"));
+
+  const cheap = await one(anon('select * from products where stock > 5 order by price limit 1'));
+  const items = [{ id: Number(cheap.id), qty: 1 }];
+  await assert.rejects(order({ items }), e => JSON.parse(e.detail).area === 'Please choose your area');
+  await assert.rejects(order({ items, area: '999' }), e => JSON.parse(e.detail).area === 'Please choose your area');
+
+  const o = await order({ items, city: 'Giza', area: '105' });
+  assert.equal(o.shipping, 75);
+  assert.equal(o.city, 'القاهرة', 'the governorate comes from the area');
+  assert.equal(o.area, 'الأزبكية');
+  const row = (await db.query('select city, area, area_id, shipping from orders order by id desc limit 1')).rows[0];
+  assert.deepEqual({ ...row }, { city: 'القاهرة', area: 'الأزبكية', area_id: 105, shipping: 75 });
+  assert.equal((await order({ items, area: '200' })).shipping, 60);
+  await db.query('update store_settings set free_shipping_over = 1');
+  assert.equal((await order({ items, area: '105' })).shipping, 0, 'free over the limit');
+  await db.query('update store_settings set free_shipping_over = 1000');
+
+  const prev = (await one(anon('select preview_discount($1,$2::jsonb,$3) r', ['nope', JSON.stringify(items), 105]))).r;
+  assert.ok(prev.error);
+
+  // Areas PostEx no longer lists are removed.
+  await admin('select admin_set_ship_areas($1::jsonb)', [JSON.stringify(areas.slice(0, 1))]);
+  assert.equal((await anon('select * from ship_areas')).length, 1);
+  await db.query('delete from ship_areas');
+});

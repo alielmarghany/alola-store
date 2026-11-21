@@ -44,6 +44,53 @@ window.A = (function () {
   const subscribe = (email, popup = null) => rpc('subscribe', { p_email: email, p_popup: popup });
   const brandLogos = () => rest('brand_logos?select=brand,logo').catch(() => []); // without logos, brand names are shown instead
 
+  // PostEx's delivery areas with its price for each. Empty until the dashboard loads them from PostEx;
+  // checkout then falls back to the governorate list and the store's own delivery fee.
+  let areasP;
+  const areas = () => (areasP ||= (async () => {
+    const all = [];
+    for (let from = 0; ; from += 1000) { // the API returns at most 1000 rows at a time
+      const page = await rest(`ship_areas?select=id,name,gov_id,gov_name,price&order=id&offset=${from}&limit=1000`);
+      all.push(...page);
+      if (page.length < 1000) return all;
+    }
+  })().catch(() => []));
+  // The biggest governorates first, then the rest in alphabetical order.
+  const TOP_GOVS = ['القاهرة', 'الجيزة', 'الإسكندرية', 'الاسكندرية'];
+  function govsOf(list) {
+    const m = new Map();
+    for (const a of list) if (!m.has(a.gov_id)) m.set(a.gov_id, a.gov_name);
+    const rank = n => { const i = TOP_GOVS.indexOf(n); return i < 0 ? 99 : i; };
+    return [...m].map(([id, name]) => ({ id, name })).sort((x, y) => rank(x.name) - rank(y.name) || x.name.localeCompare(y.name, 'ar'));
+  }
+  /** Governorate and area fields for checkout and the account page. saved: { city, area_id }. */
+  function areaFields(list, saved = {}) {
+    const pick = list.find(a => a.id === saved.area_id);
+    const gov = pick ? pick.gov_id : (list.find(a => a.gov_name === saved.city) || {}).gov_id;
+    const fld = (id, label, inner) => `<div class="fld" id="f-${id}"><label for="${id}">${label}</label>${inner}<div class="err" id="e-${id}"></div></div>`;
+    return `${fld('city', 'Governorate', `<select class="in" id="city" name="city" required autocomplete="address-level1"><option value="">Choose…</option>${govsOf(list).map(g => `<option value="${esc(g.name)}" data-gov="${g.id}" ${g.id === gov ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>`)}
+      ${fld('area', 'Area', `<select class="in" id="area" name="area" required autocomplete="address-level2" ${gov ? '' : 'disabled'}>${areaOptions(list, gov, pick?.id)}</select>`)}`;
+  }
+  function areaOptions(list, gov, selected) {
+    if (!gov) return `<option value="">Choose your governorate first</option>`;
+    return `<option value="">Choose…</option>` + list.filter(a => a.gov_id === gov).sort((x, y) => x.name.localeCompare(y.name, 'ar'))
+      .map(a => `<option value="${a.id}" ${a.id === selected ? 'selected' : ''}>${esc(a.name)}</option>`).join('');
+  }
+  /** Fills the area list when the governorate changes. onChange gets the chosen area, or null. */
+  function wireAreas(list, onChange = () => {}) {
+    const city = $('#city'), area = $('#area');
+    const chosen = () => list.find(a => a.id === Number(area.value)) || null;
+    city.addEventListener('change', () => {
+      const gov = Number(city.selectedOptions[0]?.dataset.gov) || null;
+      area.innerHTML = areaOptions(list, gov);
+      area.disabled = !gov;
+      onChange(null);
+      if (gov) area.focus();
+    });
+    area.addEventListener('change', () => onChange(chosen()));
+    return chosen;
+  }
+
   // ------------------------------------------------ storage (the browser may refuse it: never let that break the page)
   const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -107,15 +154,17 @@ window.A = (function () {
     if (changed) save('alola_cart', c);
     return lines;
   }
-  const totals = (lines, cfg) => {
+  /** area: undefined uses the store's fee; null means PostEx areas exist but none is chosen yet (shipping is then null). */
+  const totals = (lines, cfg, area) => {
     const subtotal = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
-    const shipping = !lines.length || subtotal >= cfg.freeShippingOver ? 0 : cfg.shippingFee;
-    return { subtotal, shipping, total: subtotal + shipping, count: lines.reduce((s, l) => s + l.qty, 0) };
+    const shipping = !lines.length || subtotal >= cfg.freeShippingOver ? 0
+      : area === undefined ? cfg.shippingFee : area === null ? null : (area.price ?? cfg.shippingFee);
+    return { subtotal, shipping, total: subtotal + (shipping || 0), count: lines.reduce((s, l) => s + l.qty, 0) };
   };
   async function renderCart() {
     const box = $('#cartItems'); if (!box) return;
-    const [lines, cfg] = await Promise.all([cartLines(), config()]);
-    const t = totals(lines, cfg);
+    const [lines, cfg, list] = await Promise.all([cartLines(), config(), areas()]);
+    const t = totals(lines, cfg, list.length ? null : undefined); // with PostEx areas, delivery depends on the area chosen at checkout
     box.innerHTML = lines.length ? lines.map(({ p, qty }) => `<div class="ci"><a class="thumb ph-${esc(p.category)}" href="${url(p)}" aria-label="${esc(pname(p))}">${media(p)}</a>
       <div class="ci-m"><b>${esc(pname(p))}</b><small>${esc(p.brand)} · ${fmt(p.price)}</small></div>
       <div class="qt"><button data-cq="${p.id}" data-d="-1" aria-label="Remove one ${esc(pname(p))}">−</button><span>${qty}</span><button data-cq="${p.id}" data-d="1" aria-label="Add one ${esc(pname(p))}">+</button></div></div>`).join('')
@@ -123,7 +172,7 @@ window.A = (function () {
     $$('.cart-count').forEach(el => el.textContent = t.count);
     $('#cartFoot').hidden = !lines.length;
     $('#cartSub').textContent = fmt(t.subtotal);
-    $('#cartShip').textContent = t.shipping ? fmt(t.shipping) : 'Free';
+    $('#cartShip').textContent = t.shipping === null ? 'At checkout' : t.shipping ? fmt(t.shipping) : 'Free';
     $('#cartTotal').textContent = fmt(t.total);
     const left = cfg.freeShippingOver - t.subtotal;
     $('#shipBar').hidden = !lines.length;
@@ -287,5 +336,5 @@ window.A = (function () {
     requestAnimationFrame(f);
   }
 
-  return { $, $$, esc, fmt, loc, pname, products, config, subscribe, brandLogos, GOVERNORATES, media, card, rating, price, url, tagHtml, saved, getCart, setCart, addToCart, cartLines, totals, openCart, flyToCart, toast, mountChrome, reveal, renderCart, ICON, reduced };
+  return { $, $$, esc, fmt, loc, pname, products, config, subscribe, brandLogos, GOVERNORATES, areas, areaFields, wireAreas, media, card, rating, price, url, tagHtml, saved, getCart, setCart, addToCart, cartLines, totals, openCart, flyToCart, toast, mountChrome, reveal, renderCart, ICON, reduced };
 })();

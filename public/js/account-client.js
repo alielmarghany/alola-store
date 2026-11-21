@@ -52,13 +52,13 @@ window.Acc = (function () {
   async function profile() {
     const u = await user();
     if (!u) return null;
-    const { data, error } = await sb.from('customer_profiles').select('name,phone,city,address').eq('user_id', u.id).maybeSingle();
+    const { data, error } = await sb.from('customer_profiles').select('name,phone,city,address,area_id').eq('user_id', u.id).maybeSingle();
     if (error) throw fail(error);
-    return data || { name: u.user_metadata?.full_name || '', phone: '', city: '', address: '' };
+    return data || { name: u.user_metadata?.full_name || '', phone: '', city: '', address: '', area_id: null };
   }
   async function saveProfile(p) {
     const u = await user();
-    const { error } = await sb.from('customer_profiles').upsert({ user_id: u.id, name: p.name, phone: p.phone, city: p.city, address: p.address, updated_at: new Date().toISOString() });
+    const { error } = await sb.from('customer_profiles').upsert({ user_id: u.id, name: p.name, phone: p.phone, city: p.city, address: p.address, ...(p.area_id !== undefined ? { area_id: p.area_id } : {}), updated_at: new Date().toISOString() });
     if (error) throw fail(error);
   }
   async function myOrders() {
@@ -72,8 +72,8 @@ window.Acc = (function () {
     return data;
   }
 
-  async function previewDiscount(code, items) {
-    const { data, error } = await sb.rpc('preview_discount', { p_code: code, p_items: items });
+  async function previewDiscount(code, items, area = null) {
+    const { data, error } = await sb.rpc('preview_discount', { p_code: code, p_items: items, p_area: area ?? null });
     if (error) throw fail(error);
     return data;
   }

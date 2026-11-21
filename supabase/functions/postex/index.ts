@@ -2,6 +2,7 @@
 // never in the site. Only signed-in dashboard admins can call this function.
 // Actions:
 //   test: checks the login works and returns a summary of PostEx's areas and delivery prices.
+//   sync: copies PostEx's areas and delivery prices into ship_areas, which checkout reads.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const API = 'https://postex-eg.com/api/shipment.php?action=';
@@ -49,6 +50,24 @@ async function test() {
   };
 }
 
+const clean = (t: unknown) => String(t ?? '').replace(/^[\s,،]+|[\s,،]+$/g, '');
+
+async function sync(sb: ReturnType<typeof createClient>) {
+  const sectors = await postex('getAllSectors');
+  if (!Array.isArray(sectors)) return { ok: false, message: `PostEx refused: ${JSON.stringify(sectors).slice(0, 200)}` };
+  const costs = await postex('getAllDeliveryCost');
+  const price = new Map<string, string>();
+  if (Array.isArray(costs)) for (const c of costs as { sector_id?: string; costing_delivery?: string }[]) price.set(String(c.sector_id), String(c.costing_delivery ?? ''));
+  const areas = (sectors as Record<string, unknown>[]).map((s) => ({
+    id: String(s.id), name: clean(s.name), gov_id: String(s.gov_id), gov_name: clean(s.gov_name),
+    // A missing or zero price means PostEx has no price for the area: checkout then uses the store's own fee.
+    price: Number(price.get(String(s.id))) > 0 ? String(Math.round(Number(price.get(String(s.id))))) : '',
+  }));
+  const { data, error } = await sb.rpc('admin_set_ship_areas', { p_areas: areas });
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, ...data };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return reply({ error: 'POST only' }, 405);
@@ -64,6 +83,7 @@ Deno.serve(async (req) => {
   try {
     const { action } = await req.json().catch(() => ({}));
     if (action === 'test') return reply(await test());
+    if (action === 'sync') return reply(await sync(sb));
     return reply({ error: 'Unknown action' }, 400);
   } catch (e) {
     return reply({ ok: false, message: (e as Error).message }, 502);

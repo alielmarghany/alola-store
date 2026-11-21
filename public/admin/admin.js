@@ -722,7 +722,7 @@
       <div class="rc-h"><img src="../assets/logo.png" alt="Alola"><div class="ar rc-ar">العلا</div><div>alielmarghany.github.io/alola-store</div></div>
       <div class="rc-no"><b>${esc(o.number)}</b><span>${date}</span></div>
       <div class="rc-sec"><div class="rc-lb">Client <span class="ar">العميل</span></div>
-        <b>${esc(o.customer_name)}</b><div>${esc(o.phone)}</div><div>${esc(o.city)}</div><div>${esc(o.address)}</div>
+        <b>${esc(o.customer_name)}</b><div>${esc(o.phone)}</div><div>${esc(o.area ? `${o.area}, ${o.city}` : o.city)}</div><div>${esc(o.address)}</div>
         ${o.notes ? `<div class="rc-note">Note <span class="ar">ملاحظة</span>: ${esc(o.notes)}</div>` : ''}</div>
       <table class="rc-items"><thead><tr><th>Item <span class="ar">المنتج</span></th><th class="r">Qty</th><th class="r">Total</th></tr></thead><tbody>
         ${o.items.map(i => `<tr><td>${esc(i.name)}<small>${i.code ? `${esc(i.code)} · ` : ''}${esc(i.brand)} · ${fmt(i.price)}</small></td><td class="r">${i.qty}</td><td class="r nowrap">${fmt(i.qty * i.price)}</td></tr>`).join('')}
@@ -787,11 +787,34 @@
   }
   function openPostex() {
     const dr = openDrawer(`<div class="dr-h"><h2>PostEx shipping</h2>${closeBtn}</div>
+      <div class="card"><h2>Delivery areas and prices</h2>
+        <p class="note">Checkout asks for the governorate, then the area, and charges PostEx’s price for that area. Orders over the free delivery limit stay free. Update this when PostEx changes its areas or prices.</p>
+        <div id="pxAreas" style="margin:10px 0" aria-live="polite"><div class="skeleton" style="height:40px"></div></div>
+        <button type="button" class="btn" id="pxSync">${I.truck} Update areas and prices from PostEx</button></div>
       <div class="card"><h2>Connection</h2>
         <p class="note">The PostEx login is kept in Supabase, not in the website. This checks that PostEx accepts it.</p>
-        <button type="button" class="btn" id="pxTest" style="margin-top:10px">${I.truck} Test connection</button>
+        <button type="button" class="btn ln" id="pxTest" style="margin-top:10px">Test connection</button>
         <div id="pxOut" style="margin-top:12px" aria-live="polite"></div></div>`);
-    const out = $('#pxOut', dr), btn = $('#pxTest', dr);
+    const out = $('#pxOut', dr), btn = $('#pxTest', dr), areasBox = $('#pxAreas', dr), syncBtn = $('#pxSync', dr);
+    async function drawAreas() {
+      try {
+        const s = await db.shipAreaStatus();
+        areasBox.innerHTML = s.areas
+          ? `<p><b>${s.areas} areas</b> loaded, ${s.priced} with a PostEx price. Last updated ${when(s.updated)}.</p>${s.areas > s.priced ? `<p class="note">Areas without a PostEx price use your standard delivery fee.</p>` : ''}`
+          : `<p class="note"><b>Not loaded yet.</b> Until you update, checkout asks for the governorate only and uses your standard delivery fee.</p>`;
+      } catch (e) { areasBox.innerHTML = ''; fail(e); }
+    }
+    drawAreas();
+    syncBtn.onclick = async () => {
+      syncBtn.disabled = true; syncBtn.textContent = 'Updating…';
+      try {
+        const r = await db.postex('sync');
+        if (!r.ok) fail(new Error(r.message || 'PostEx didn’t send the areas'));
+        else toast(`${r.areas} areas in ${r.governorates} governorates loaded`);
+        await drawAreas();
+      } catch (e) { fail(e); }
+      finally { syncBtn.disabled = false; syncBtn.innerHTML = `${I.truck} Update areas and prices from PostEx`; }
+    };
     btn.onclick = async () => {
       btn.disabled = true; out.innerHTML = '<div class="skeleton" style="height:80px"></div>';
       try {
@@ -821,7 +844,7 @@
         ${o.discount ? `<div class="rw"><span style="color:var(--mute)">Discount (${esc(o.discount_code)})</span><span class="num">−${fmt(o.discount)}</span></div>` : ''}
         <div class="rw"><span style="color:var(--mute)">Delivery${o.discount_code && !o.discount ? ` (${esc(o.discount_code)})` : ''}</span><span class="num">${o.shipping ? fmt(o.shipping) : 'Free'}</span></div>
         <div class="rw"><b>Total (cash on delivery)</b><b class="num">${fmt(o.total)}</b></div></div></div>
-      <div class="card"><h2>Client</h2><dl class="kv"><dt>Name</dt><dd><a href="#" id="toCust">${esc(o.customer_name)}</a></dd><dt>Phone</dt><dd><a href="tel:${esc(o.phone.replace(/[^+\d]/g, ''))}">${esc(o.phone)}</a></dd><dt>Email</dt><dd><a href="mailto:${esc(o.email)}">${esc(o.email)}</a></dd><dt>Governorate</dt><dd>${esc(o.city)}</dd><dt>Address</dt><dd>${esc(o.address)}</dd>${o.notes ? `<dt>Notes</dt><dd>${esc(o.notes)}</dd>` : ''}</dl></div>`);
+      <div class="card"><h2>Client</h2><dl class="kv"><dt>Name</dt><dd><a href="#" id="toCust">${esc(o.customer_name)}</a></dd><dt>Phone</dt><dd><a href="tel:${esc(o.phone.replace(/[^+\d]/g, ''))}">${esc(o.phone)}</a></dd><dt>Email</dt><dd><a href="mailto:${esc(o.email)}">${esc(o.email)}</a></dd><dt>Governorate</dt><dd>${esc(o.city)}</dd>${o.area ? `<dt>Area</dt><dd>${esc(o.area)}</dd>` : ''}<dt>Address</dt><dd>${esc(o.address)}</dd>${o.notes ? `<dt>Notes</dt><dd>${esc(o.notes)}</dd>` : ''}</dl></div>`);
     $('#toCust', dr).onclick = e => { e.preventDefault(); openCustomer(o.customer_id); };
     $('#oPrint', dr).onclick = () => printReceipt(o);
     $('#steps', dr).onclick = async e => {
