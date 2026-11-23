@@ -127,6 +127,18 @@ insert into store_settings default values;
 -- PostEx's delivery areas and its price for each, copied from PostEx by the dashboard (Orders > PostEx).
 -- id is PostEx's sector id. An area without a price uses store_settings.shipping_fee.
 -- While this table is empty, checkout asks for the governorate only and uses shipping_fee.
+-- The shop PC's automatic stock sync: one row. See sync_stock.
+create table stock_sync (
+  id integer primary key default 1 check (id = 1),
+  key_hash text,
+  key_made_at timestamptz,
+  last_at timestamptz,
+  last_rows integer,
+  last_matched integer,
+  last_updated integer
+);
+insert into stock_sync default values;
+
 create table ship_areas (
   id integer primary key,
   name text not null,
@@ -862,12 +874,13 @@ end $$;
 
 -- Updates prices and stock from the shop's own item sheet, matching rows by product code.
 -- Each row is {code, price, stock}; a missing price or stock leaves that value as it is.
--- Prices are rounded to whole pounds. Returns how many products changed.
-create function admin_import_sheet(p_rows jsonb) returns jsonb language plpgsql security definer set search_path = public as $$
+-- Prices are rounded to whole pounds. Returns how many products changed and how many codes matched.
+-- Not callable directly: admin_import_sheet and sync_stock check who is calling first.
+create function import_item_rows(p_rows jsonb) returns jsonb language plpgsql security definer set search_path = public as $$
 declare
   v_updated integer;
+  v_matched integer;
 begin
-  perform require_admin();
   if jsonb_typeof(p_rows) is distinct from 'array' or jsonb_array_length(p_rows) = 0 then raise exception 'The sheet has no rows'; end if;
   if jsonb_array_length(p_rows) > 20000 then raise exception 'The sheet is too large (20,000 rows at most)'; end if;
   with s as (
@@ -886,8 +899,58 @@ begin
     from n where p.id = n.id and (p.price <> n.np or p.stock <> n.ns)
     returning p.id
   )
-  select count(*) into v_updated from upd;
-  return jsonb_build_object('updated', v_updated);
+  select (select count(*) from upd), (select count(*) from n) into v_updated, v_matched;
+  return jsonb_build_object('updated', v_updated, 'matched', v_matched);
+end $$;
+
+create function admin_import_sheet(p_rows jsonb) returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  perform require_admin();
+  return import_item_rows(p_rows);
+end $$;
+
+-- ---------------------------------------------------------------- automatic stock sync from the shop PC
+-- The Alola Stock Sync program on the shop PC exports stock from E-Stock and sends it here every 30 minutes.
+-- It holds a sync key instead of an admin login: the key can only update stock, nothing else.
+-- Only a hash of the key is kept; the key itself is shown once, when it is made.
+create function sync_key_hash(p_key text) returns text language sql immutable set search_path = public as
+$$ select encode(sha256(convert_to(coalesce(p_key, ''), 'UTF8')), 'hex') $$;
+
+create function admin_new_sync_key() returns text language plpgsql security definer set search_path = public as $$
+declare
+  v_key text := 'alola_sync_' || replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
+begin
+  perform require_admin();
+  update stock_sync set key_hash = sync_key_hash(v_key), key_made_at = now() where id = 1;
+  return v_key;
+end $$;
+
+create function admin_stop_sync() returns void language plpgsql security definer set search_path = public as $$
+begin
+  perform require_admin();
+  update stock_sync set key_hash = null where id = 1;
+end $$;
+
+create function admin_sync_status() returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  perform require_admin();
+  return (select jsonb_build_object('on', key_hash is not null, 'key_made_at', key_made_at, 'last_at', last_at,
+    'last_rows', last_rows, 'last_matched', last_matched, 'last_updated', last_updated) from stock_sync where id = 1);
+end $$;
+
+-- Called by the shop PC with its key. Rows are {code, stock}: prices are never changed this way.
+create function sync_stock(p_key text, p_rows jsonb) returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_ok boolean;
+  v_result jsonb;
+begin
+  select key_hash is not null and key_hash = sync_key_hash(p_key) into v_ok from stock_sync where id = 1 for update;
+  if not coalesce(v_ok, false) then raise exception 'This sync key is not valid. Make a new one in the dashboard: Products > Update from sheet.' using errcode = '42501'; end if;
+  if jsonb_typeof(p_rows) is distinct from 'array' then raise exception 'The sheet has no rows'; end if;
+  v_result := import_item_rows((select coalesce(jsonb_agg(jsonb_build_object('code', r->>'code', 'stock', r->'stock')), '[]') from jsonb_array_elements(p_rows) r));
+  update stock_sync set last_at = now(), last_rows = jsonb_array_length(p_rows),
+    last_matched = (v_result->>'matched')::integer, last_updated = (v_result->>'updated')::integer where id = 1;
+  return v_result;
 end $$;
 
 -- Times come in as Cairo local time, whatever timezone the admin's computer is set to.
@@ -1067,6 +1130,7 @@ alter table theme_schedule enable row level security;
 alter table brand_logos enable row level security;
 alter table events enable row level security;
 alter table ship_areas enable row level security;
+alter table stock_sync enable row level security; -- no policies: functions only
 alter table popups enable row level security; -- no policies: written by track(), read by admin_marketing()
 
 create policy "Live products are public" on products for select to anon, authenticated using (active or is_admin());
@@ -1116,7 +1180,9 @@ grant execute on function track(jsonb) to anon, authenticated;
 grant execute on function admin_add_theme_schedule(text, text, text) to authenticated;
 grant execute on function admin_analytics(), admin_list_products(), admin_list_orders(text, text, integer), admin_get_order(bigint),
   admin_set_order_status(bigint, text), admin_set_theme(text), admin_list_customers(text, text, integer), admin_get_customer(bigint), admin_import_sheet(jsonb), admin_set_hero(jsonb),
-  admin_marketing(integer), admin_customers_export(), admin_save_popup(jsonb), admin_set_popup_active(bigint, boolean), admin_list_popups(), admin_subscribers_export(), admin_set_ship_areas(jsonb) to authenticated;
+  admin_marketing(integer), admin_customers_export(), admin_save_popup(jsonb), admin_set_popup_active(bigint, boolean), admin_list_popups(), admin_subscribers_export(), admin_set_ship_areas(jsonb),
+  admin_new_sync_key(), admin_stop_sync(), admin_sync_status() to authenticated;
+grant execute on function sync_stock(text, jsonb) to anon, authenticated;
 
 -- ---------------------------------------------------------------- live notifications
 alter publication supabase_realtime add table notifications;

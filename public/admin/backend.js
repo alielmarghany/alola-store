@@ -183,6 +183,9 @@ window.AdminDB = (function () {
     products: () => rpc('admin_list_products'),
     saveProduct, deleteProduct, upload,
     importSheet: rows => rpc('admin_import_sheet', { p_rows: rows }),
+    syncStatus: () => rpc('admin_sync_status'),
+    newSyncKey: () => rpc('admin_new_sync_key'),
+    stopSync: () => rpc('admin_stop_sync'),
     theme: async () => {
       const { data, error } = await sb.from('store_settings').select('theme').single();
       check(error);

@@ -1,0 +1,39 @@
+name: Build Alola Stock Sync for Windows
+
+on:
+  push:
+    paths: ['stock-sync/**', '.github/workflows/stock-sync.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: stock-sync
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.txt
+      - run: python -m unittest test_sync
+      - run: python -m PyInstaller --noconfirm --onefile --windowed --name AlolaStockSync alola_stock_sync.py
+      - run: python -m PyInstaller --noconfirm --onefile --console --name AlolaStockSync-cli alola_stock_sync.py
+      - name: Put the program, settings and guide in one folder
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force AlolaSync | Out-Null
+          Copy-Item dist\AlolaStockSync.exe, dist\AlolaStockSync-cli.exe, README.md, start-with-windows.bat, stop-starting-with-windows.bat, config.example.json AlolaSync\
+          Copy-Item config.example.json AlolaSync\config.json
+          # Quick check that the program starts.
+          & .\AlolaSync\AlolaStockSync-cli.exe help
+          if ($LASTEXITCODE -ne 2) { throw "The program didn't start" }
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AlolaSync
+          path: stock-sync/AlolaSync

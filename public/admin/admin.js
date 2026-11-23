@@ -905,8 +905,10 @@
         <p class="note">Export the item list from your stock system as Excel, CSV or PDF. Products are matched by their <b>product code</b> (كود الصنف). Prices use the selling price column (سعر البيع) and stock uses the balance column (الرصيد or الكمية), when the sheet has them.</p>
         <div class="up"><label class="btn ln" style="cursor:pointer">Choose file<input type="file" id="i_file" accept=".xlsx,.xls,.csv,.pdf" class="sr"></label><span class="note" id="i_name"></span></div>
       </div>
-      <div id="i_out"></div>`);
+      <div id="i_out"></div>
+      <div class="card" id="i_sync"><h2>Automatic stock sync</h2><p class="note">Loading…</p></div>`);
     let sheet = null;
+    drawSync($('#i_sync', dr));
     $('#i_file', dr).onchange = async e => {
       const file = e.target.files[0]; e.target.value = '';
       if (!file) return;
@@ -967,6 +969,29 @@
         } catch (ex) { showErr(ex.message); e.target.disabled = false; }
       };
     }
+  }
+
+  // The Alola Stock Sync program on the shop PC exports stock from E-Stock every 30 minutes and sends it here with a sync key.
+  async function drawSync(el, key) {
+    let st;
+    try { st = await db.syncStatus(); } catch (ex) { el.innerHTML = `<h2>Automatic stock sync</h2><p class="note">${esc(ex.message)}</p>`; return; }
+    const late = st.on && (!st.last_at || Date.now() - new Date(st.last_at) > 2 * 3600e3);
+    el.innerHTML = `<h2>Automatic stock sync</h2>
+      <p class="note">The <b>Alola Stock Sync</b> program on the shop PC opens E-Stock, exports the stock and updates it here every 30 minutes. It only changes stock, never prices. It needs a sync key, made here.</p>
+      ${st.on ? `<p>${st.last_at ? `Last sync <b>${ago(st.last_at)}</b> (${when(st.last_at)}): ${Number(st.last_rows).toLocaleString()} items in the export, ${st.last_matched} matched your products, ${st.last_updated} changed.` : 'Waiting for the first sync from the shop PC.'}</p>
+        ${late ? '<p class="note" style="color:var(--rose2)"><b>No sync for over 2 hours.</b> Check the shop PC is on and the program is running.</p>' : ''}`
+      : '<p class="note"><b>Off.</b> No sync key is set.</p>'}
+      ${key ? `<div class="fld"><label for="i_key">New sync key: copy it into the program now. It won’t be shown again.</label><div class="bar"><input class="in grow" id="i_key" readonly value="${esc(key)}" spellcheck="false"><button class="btn ln" id="i_copy">Copy</button></div></div>` : ''}
+      <div class="bar"><button class="btn ln" id="i_new">${st.on ? 'Replace sync key' : 'Make sync key'}</button>${st.on ? '<button class="btn ln" id="i_stop">Turn off</button>' : ''}</div>`;
+    if (key) $('#i_copy', el).onclick = async () => { try { await navigator.clipboard.writeText(key); toast('Key copied'); } catch { $('#i_key', el).select(); } };
+    $('#i_new', el).onclick = async () => {
+      if (st.on && !confirm('Make a new key? The shop PC will stop syncing until you paste the new key into it.')) return;
+      try { drawSync(el, await db.newSyncKey()); } catch (ex) { toast(ex.message); }
+    };
+    if (st.on) $('#i_stop', el).onclick = async () => {
+      if (!confirm('Turn off the automatic stock sync? The shop PC’s key stops working.')) return;
+      try { await db.stopSync(); drawSync(el); } catch (ex) { toast(ex.message); }
+    };
   }
 
   const ARTS = [['dropper', 'Dropper bottle'], ['pump', 'Pump bottle'], ['tube', 'Tube'], ['jar', 'Jar'], ['lipstick', 'Lipstick'], ['mascara', 'Mascara'], ['perfume', 'Perfume'], ['bottle', 'Bottle']];
