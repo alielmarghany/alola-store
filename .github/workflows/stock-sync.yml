@@ -30,7 +30,9 @@ jobs:
           Copy-Item dist\AlolaStockSync.exe, dist\AlolaStockSync-cli.exe, README.md, start-with-windows.bat, stop-starting-with-windows.bat, config.example.json AlolaSync\
           Copy-Item config.example.json AlolaSync\config.json
           # Quick check that the program starts.
-          & .\AlolaSync\AlolaStockSync-cli.exe help | Out-Null
+          & .\AlolaSync\AlolaStockSync-cli.exe help
+          if ($LASTEXITCODE -ne 2) { throw "The program didn't start" }
+          exit 0
       - uses: actions/upload-artifact@v4
         with:
           name: AlolaSync
