@@ -20,6 +20,7 @@ A cosmetics store and admin dashboard. The site is static files hosted on **GitH
 - Orders: search, view details and change status
 - Products: add, edit, hide or delete, with photo upload
 - Update from sheet: upload the item sheet exported from the shop's stock system (Excel, CSV or PDF). Products are matched by product code (كود الصنف), and their price (سعر البيع) and stock (الرصيد or الكمية) are updated after you check a preview of every change
+- Automatic stock sync: the **Alola Stock Sync** program on the shop PC opens E-Stock every 30 minutes, exports the stock and updates it on the website by product code. It uses a sync key made in the dashboard (Products > Update from sheet), which can only change stock. Setup is in `stock-sync/README.md`
 - Customers: contact details, total spent and order history
 - Live new-order alerts: bell counter, pop-up, sound, tab title count and optional desktop alerts
 - Discount codes: a percentage off, an amount off or free delivery, with optional minimum order, usage limit and expiry date
@@ -120,4 +121,5 @@ public/            The website GitHub Pages serves
 supabase/          Database schema, sample data and cleanup
 test/              Database tests
 scripts/serve.js   Local development server
+stock-sync/        Windows program that sends E-Stock's stock to the store every 30 minutes
 ```

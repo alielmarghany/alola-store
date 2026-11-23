@@ -1,0 +1,8 @@
+config.json
+state.json
+sync.lock
+logs/
+build/
+dist/
+*.spec
+__pycache__/

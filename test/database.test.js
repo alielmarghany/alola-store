@@ -436,6 +436,7 @@ test('the item sheet updates price and stock by product code, for admins only', 
   await assert.rejects(admin("select admin_import_sheet('[]'::jsonb)"), /no rows/);
   const r = (await one(admin('select admin_import_sheet($1::jsonb) r', [JSON.stringify(rows)]))).r;
   assert.equal(r.updated, 2);
+  assert.equal(r.matched, 2);
   const after = await anon('select id, price, stock, compare_at from products where id = any($1) order by id', [[a.id, b.id]]);
   assert.deepEqual(after.map(p => [p.price, p.stock]), [[115, 7], [b.price + 80, b.stock]]);
   assert.equal(after[1].compare_at, null);
@@ -445,6 +446,40 @@ test('the item sheet updates price and stock by product code, for admins only', 
   assert.deepEqual(await anon('select price, stock from products where id=$1', [a.id]), [{ price: 115, stock: 0 }]);
   await admin('update products set code=null, price=$2, stock=$3 where id=$1', [a.id, a.price, a.stock]);
   await admin('update products set code=null, price=$2, stock=$3 where id=$1', [b.id, b.price, b.stock]);
+});
+
+test('the shop PC syncs stock with its own key, and the key can do nothing else', async () => {
+  const [a] = await anon('select id, price, stock from products order by id limit 1');
+  await admin("update products set code='SY-1' where id=$1", [a.id]);
+  const rows = JSON.stringify([{ code: 'SY-1', stock: 13, price: 9999 }, { code: 'NOT-OURS', stock: 4 }]);
+  // No key yet: nothing works.
+  await assert.rejects(anon('select sync_stock($1, $2::jsonb)', ['', rows]), /not valid/);
+  await assert.rejects(anon('select sync_stock(null, $1::jsonb)', [rows]), /not valid/);
+  // Only admins make keys or read the status, and nobody reads the table.
+  await assert.rejects(anon('select admin_new_sync_key()'), /permission denied/);
+  await assert.rejects(stranger('select admin_new_sync_key()'), /Not authorised/);
+  await assert.rejects(stranger('select admin_sync_status()'), /Not authorised/);
+  await assert.rejects(anon('select * from stock_sync'), /permission denied/);
+  await assert.rejects(anon('select import_item_rows($1::jsonb)', [rows]), /permission denied/);
+  const key = (await one(admin('select admin_new_sync_key() k'))).k;
+  assert.match(key, /^alola_sync_[0-9a-f]{64}$/);
+  assert.equal((await one(admin('select admin_sync_status() s'))).s.on, true);
+  await assert.rejects(anon('select sync_stock($1, $2::jsonb)', [key + 'x', rows]), /not valid/);
+  const r = (await one(anon('select sync_stock($1, $2::jsonb) r', [key, rows]))).r;
+  assert.deepEqual(r, { updated: 1, matched: 1 });
+  // Stock changes; the price in the rows is ignored.
+  assert.deepEqual(await anon('select price, stock from products where id=$1', [a.id]), [{ price: a.price, stock: 13 }]);
+  const st = (await one(admin('select admin_sync_status() s'))).s;
+  assert.equal(st.last_rows, 2); assert.equal(st.last_matched, 1); assert.equal(st.last_updated, 1);
+  assert.ok(st.last_at);
+  // A new key replaces the old one; stopping turns the sync off.
+  const key2 = (await one(admin('select admin_new_sync_key() k'))).k;
+  await assert.rejects(anon('select sync_stock($1, $2::jsonb)', [key, rows]), /not valid/);
+  await anon('select sync_stock($1, $2::jsonb)', [key2, rows]);
+  await admin('select admin_stop_sync()');
+  await assert.rejects(anon('select sync_stock($1, $2::jsonb)', [key2, rows]), /not valid/);
+  assert.equal((await one(admin('select admin_sync_status() s'))).s.on, false);
+  await admin('update products set code=null, stock=$2 where id=$1', [a.id, a.stock]);
 });
 
 test('the home page hero is set by admins, cleaned, and readable by everyone', async () => {
