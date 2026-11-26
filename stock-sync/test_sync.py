@@ -76,6 +76,32 @@ class Reading(unittest.TestCase):
         self.assertEqual(sheet.rows_from_grid(grid)['rows'][0]['stock'], 5)
         self.assertEqual(sheet.rows_from_grid(grid, {'stock': 'Balance'})['rows'][0]['stock'], 9)
 
+    def test_estock_crystal_report_data_only(self):
+        # E-Stock's "تقرير أصناف مخازن موجز" exported as Excel Data-Only: title rows, the store's own
+        # code on every row, headings one column off their values, and totals columns.
+        grid = [
+            ['تقرير أصناف مخازن موجز', None, None, None, None, None, None, None, None, None, None],
+            ['العلا ستور لمستحضرات التجميل', None, None, None, None, None, None, None, None, None, None],
+            ['كود المخازن', 'اسم المخازن', None, 'الكود', None, 'اسم الصنف', 'الشركة', 'الوحدة', 'الكمية', 'التكلفة', 'البيع', 'إجمالي البيع'],
+            [1, 'الشركة', None, None, 14872, 'ema whitening medium', 'فورمار', 'قطعة', 16, 25.64, 35, 560],
+            [1, 'الشركة', None, None, '14,873', 'ema whitening soft', 'فورمار', 'قطعة', '6.00', 25.62, 35, 210],
+            [1, 'الشركة', None, None, 12232.0, 'LOREAL ELVIVE', 'فورمار', 'قطعة', 2, 86.91, 115.43, 230],
+        ]
+        data = sheet.rows_from_grid(grid)
+        self.assertEqual([(r['code'], r['stock']) for r in data['rows']], [('14872', 16), ('14873', 6), ('12232', 2)])
+
+    def test_headings_split_over_two_rows(self):
+        grid = [['كود', 'اسم', 'الرصيد'], ['الصنف', 'الصنف', 'الحالي'], ['A1', 'x', 3], ['A2', 'y', 4]]
+        self.assertEqual([r['stock'] for r in sheet.rows_from_grid(grid)['rows']], [3, 4])
+
+    def test_the_shops_own_export(self):
+        path = os.environ.get('ESTOCK_SAMPLE')
+        if not path:
+            self.skipTest('set ESTOCK_SAMPLE to an export from the shop')
+        data = sheet.read(path)
+        self.assertTrue(data['has_stock'])
+        self.assertGreater(len(data['rows']), 1000)
+
     def test_numbers(self):
         self.assertEqual(sheet.num('1,250.5'), 1250.5)
         self.assertEqual(sheet.num('٤٥'), 45)
@@ -95,7 +121,7 @@ class Sending(unittest.TestCase):
         rows = [['كود', 'الرصيد']] + [[f'C{i}', i % 7] for i in range(20)]
         with open(self.csv, 'w', encoding='utf-8') as f:
             f.write('\n'.join(','.join(map(str, r)) for r in rows))
-        self.cfg = app.merge(app.DEFAULTS, {'anon_key': 'anon', 'sync_key': 'key', 'export_file': self.csv})
+        self.cfg = app.merge(app.DEFAULTS, {'anon_key': 'anon', 'sync_key': 'key', 'export_file': self.csv, 'missing_is_zero': False})
         patches = [mock.patch.object(app, 'STATE', os.path.join(d, 'state.json')), mock.patch.object(app, 'LOCK', os.path.join(d, 'lock'))]
         for p in patches:
             p.start()
@@ -114,11 +140,21 @@ class Sending(unittest.TestCase):
             return Res()
         with mock.patch('urllib.request.urlopen', fake):
             msg = app.sync_once(self.cfg, do_export=False)
-        self.assertIn('18 matched', msg)
+        self.assertIn('18 website products matched', msg)
         self.assertTrue(sent['url'].endswith('/rest/v1/rpc/sync_stock'))
         self.assertEqual(sent['body']['p_key'], 'key')
         self.assertEqual(sent['body']['p_rows'][3], {'code': 'C3', 'stock': 3})
         self.assertEqual(app.load_state()['last_rows'], 20)
+
+    def test_website_products_missing_from_the_export_are_sold_out(self):
+        self.cfg['missing_is_zero'] = True
+        with mock.patch.object(app, '_get', return_value=[{'code': 'C1'}, {'code': 'GONE'}]):
+            rows = app.add_missing(self.cfg, [{'code': 'C1', 'stock': 4}])
+        self.assertEqual(rows, [{'code': 'C1', 'stock': 4}, {'code': 'GONE', 'stock': 0}])
+        # Most of the website missing: the export is probably wrong.
+        with mock.patch.object(app, '_get', return_value=[{'code': 'A'}, {'code': 'B'}, {'code': 'C1'}]):
+            with self.assertRaisesRegex(app.SyncError, 'missing from the export'):
+                app.add_missing(self.cfg, [{'code': 'C1', 'stock': 4}])
 
     def test_refuses_an_export_much_smaller_than_the_last(self):
         app.save_state({'last_rows': 100})

@@ -26,12 +26,18 @@ window.SheetImport = (function () {
     ['price', ['سعر', 'price']],
     ['name', ['اسم', 'صنف', 'name', 'item', 'description']],
   ];
+  const NOT_ITEM = ['مخزن', 'مخازن', 'فرع', 'store', 'warehouse', 'branch'];
   function kindOf(text) {
     const h = norm(text);
     if (!h) return null;
     const forms = [h, [...h].reverse().join('')];
     if (forms.some(f => f.includes('عددالوحدات') || f.includes('unitsper'))) return 'other'; // units per pack is not stock
-    for (const [kind, keys] of KINDS) if (forms.some(f => keys.some(k => f.includes(k)))) return kind;
+    if (forms.some(f => f.includes('اجمالي') || f.includes('total'))) return 'other'; // a total value, not the item's own number
+    for (const [kind, keys] of KINDS) {
+      if (!forms.some(f => keys.some(k => f.includes(k)))) continue;
+      if (kind === 'code' && forms.some(f => NOT_ITEM.some(w => f.includes(w)))) continue; // كود المخازن is the store's code
+      return kind;
+    }
     return 'other';
   }
   const isHeader = kinds => kinds.includes('code') && (kinds.includes('price') || kinds.includes('stock'));

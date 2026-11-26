@@ -52,8 +52,11 @@ DEFAULTS = {
     'export_file': r'C:\AlolaSync\stock.xlsx',
     'export_wait_seconds': 120,
     'columns': {'code': '', 'stock': ''},
+    # E-Stock's report can leave out items with no stock (the الرصيد > 0 box). Then a website
+    # product whose code isn't in the export has sold out, and is set to 0.
+    'missing_is_zero': True,
     'steps': [],
-    'safety': {'min_rows': 5, 'min_share_of_last': 0.5, 'max_zero_share': 0.9},
+    'safety': {'min_rows': 5, 'min_share_of_last': 0.5, 'max_zero_share': 0.9, 'max_missing_share': 0.5},
 }
 
 
@@ -203,7 +206,14 @@ class EStock:
         elif do == 'click_text':
             self.click_text(step['text'], float(step.get('timeout', 15)))
         elif do == 'menu':
-            self.win.menu_select(step['path'])
+            try:
+                self.win.menu_select(step['path'])
+            except Exception:  # menus some programs draw themselves: click each name instead
+                for name in step['path'].split('->'):
+                    self.click_text(name.strip(), float(step.get('timeout', 15)))
+                    time.sleep(0.8)
+        elif do == 'press_ok':
+            self.press_ok(float(step.get('timeout', 15)))
         elif do == 'wait_window':
             w = self.find(step['title'], float(step.get('timeout', 30)))
             self.focus(w)
@@ -238,12 +248,44 @@ class EStock:
                 raise SyncError(f'Couldn’t find "{text}" on the screen.')
             time.sleep(0.5)
 
+    def press_ok(self, timeout):
+        """Waits for a message box (such as "Export completed") and presses OK. Fine if none comes."""
+        end = time.time() + timeout
+        while time.time() < end:
+            try:
+                boxes = [w for w in self.Desktop(backend='win32').windows(class_name='#32770', visible_only=True)]
+            except Exception:
+                boxes = []
+            if boxes:
+                self.focus(boxes[0])
+                self.keyboard.send_keys('{ENTER}')
+                return
+            time.sleep(1)
+        log.info('  no message box came up')
+
+    def choose_type(self, dlg, text):
+        """Picks the file type in a Save box, such as "Microsoft Excel (XLS) Data-Only"."""
+        try:
+            from pywinauto import Desktop
+            u = Desktop(backend='uia').window(handle=dlg.handle)
+            combo = u.child_window(title_re='Save as type.*|حفظ بنوع.*', control_type='ComboBox')
+            combo.expand()
+            time.sleep(0.4)
+            item = combo.child_window(title_re='.*' + re.escape(text) + '.*', control_type='ListItem', found_index=0)
+            item.click_input()
+            time.sleep(0.4)
+            return
+        except Exception as e:
+            log.warning('  couldn’t pick "%s" as the file type (%s); keeping the one shown', text, e)
+
     def save_as(self, step):
         """Fills in a Save dialog with export_file, presses Enter and says yes to replacing the old file."""
         path = self.cfg['export_file']
         title = step.get('title', '.*(Save|Export|حفظ|تصدير|Speichern).*')
         dlg = self.find(title, float(step.get('timeout', 30)))
         self.focus(dlg)
+        if step.get('type'):
+            self.choose_type(dlg, step['type'])
         try:  # the file name box, when Windows lets us find it
             box = dlg.child_window(class_name='Edit', found_index=0)
             box.set_edit_text(path)
@@ -297,7 +339,12 @@ def export(cfg):
     try:
         es.open()
         for i, step in enumerate(cfg['steps'], 1):
-            es.run_step(i, step)
+            try:
+                es.run_step(i, step)
+            except Exception as e:
+                if not step.get('optional'):
+                    raise
+                log.info('  step %d skipped: %s', i, e)
         wait_for_file(path, started, cfg['export_wait_seconds'])
     except Exception:
         es.screenshot('this error')
@@ -343,6 +390,30 @@ def plan(cfg, path, state):
     return rows
 
 
+def _get(cfg, path):
+    url = cfg['supabase_url'].rstrip('/') + path
+    req = urllib.request.Request(url, headers={'apikey': cfg['anon_key'], 'Authorization': 'Bearer ' + cfg['anon_key']})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as res:
+            return json.loads(res.read().decode())
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        raise SyncError(f'Couldn’t reach the store: {getattr(e, "reason", e)}. Check the internet connection.')
+
+
+def add_missing(cfg, rows):
+    """Adds stock 0 for website products whose code isn't in the export (they sold out)."""
+    site = {str(p['code']).strip() for p in _get(cfg, '/rest/v1/products?select=code&code=not.is.null') if p.get('code')}
+    have = {r['code'] for r in rows}
+    missing = sorted(site - have)
+    if site and len(missing) > len(site) * cfg['safety']['max_missing_share']:
+        raise SyncError(f'{len(missing)} of the {len(site)} products on the website are missing from the export. '
+                        'Not sending, in case the export is wrong. Check the product codes match E-Stock.')
+    if missing:
+        log.info('%d website products are not in the export, so they are sold out: %s', len(missing),
+                 ', '.join(missing[:20]) + (' …' if len(missing) > 20 else ''))
+    return rows + [{'code': c, 'stock': 0} for c in missing]
+
+
 def send(cfg, rows):
     if not cfg['sync_key'] or not cfg['anon_key']:
         raise SyncError('Set "sync_key" and "anon_key" in config.json (see README.md).')
@@ -378,12 +449,15 @@ def sync_once(cfg, do_export=True, path=None):
             log.info('Exporting stock from E-Stock')
             export(cfg)
         rows = plan(cfg, path, state)
+        found = len(rows)
+        if cfg.get('missing_is_zero'):
+            rows = add_missing(cfg, rows)
         log.info('Sending %d items to the store', len(rows))
         r = send(cfg, rows)
-        state.update(last_ok=datetime.now().isoformat(timespec='seconds'), last_rows=len(rows),
+        state.update(last_ok=datetime.now().isoformat(timespec='seconds'), last_rows=found,
                      last_matched=r.get('matched'), last_updated=r.get('updated'), last_error=None)
         save_state(state)
-        msg = f'{len(rows)} items sent: {r.get("matched")} matched products on the website, {r.get("updated")} changed.'
+        msg = f'{found} items in the export, {len(rows) - found} sold out on the website. {r.get("matched")} website products matched, {r.get("updated")} changed.'
         log.info(msg)
         return msg
 

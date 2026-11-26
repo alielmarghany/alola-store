@@ -5,52 +5,80 @@
   "sync_key": "PASTE THE SYNC KEY FROM THE DASHBOARD HERE",
   "interval_minutes": 30,
   "estock": {
-    "exe": "C:\\E-Stock\\EStock.exe",
-    "window_title": ".*(E-?Stock|إي ستوك).*",
-    "start_wait_seconds": 60,
+    "exe": "D:\\Retail\\install\\e-Stock Retail\\e-Stock.exe",
+    "window_title": ".*e-Stock Retail.*",
+    "start_wait_seconds": 90,
     "close_after": false
   },
-  "export_file": "C:\\AlolaSync\\stock.xlsx",
-  "export_wait_seconds": 120,
+  "export_file": "C:\\AlolaSync\\stock.xls",
+  "export_wait_seconds": 180,
   "columns": {
     "code": "",
     "stock": ""
   },
+  "missing_is_zero": true,
   "steps": [
     {
       "do": "focus"
     },
     {
-      "do": "click_text",
-      "text": "التقارير"
-    },
-    {
-      "do": "click_text",
-      "text": "أرصدة الأصناف"
-    },
-    {
-      "do": "wait",
-      "seconds": 5
-    },
-    {
-      "do": "click_text",
-      "text": "تصدير"
-    },
-    {
-      "do": "save_as"
-    },
-    {
-      "do": "wait",
-      "seconds": 3
-    },
-    {
       "do": "keys",
-      "keys": "{ESC}"
+      "keys": "{ESC}{ESC}",
+      "optional": true
+    },
+    {
+      "do": "menu",
+      "path": "المخازن->تقرير أصناف مخازن موجز"
+    },
+    {
+      "do": "wait",
+      "seconds": 4
+    },
+    {
+      "do": "click_text",
+      "text": "بحث"
+    },
+    {
+      "do": "wait",
+      "seconds": 10
+    },
+    {
+      "do": "click_text",
+      "text": "معاينة طباعة"
+    },
+    {
+      "do": "wait",
+      "seconds": 15
+    },
+    {
+      "do": "click_text",
+      "text": "Export Report",
+      "timeout": 20
+    },
+    {
+      "do": "save_as",
+      "title": ".*Export Report.*",
+      "type": "Microsoft Excel (XLS) Data-Only"
+    },
+    {
+      "do": "press_ok",
+      "timeout": 60
+    },
+    {
+      "do": "wait",
+      "seconds": 2
+    },
+    {
+      "do": "click_text",
+      "text": "إغلاق",
+      "timeout": 5,
+      "optional": true
     }
   ],
   "safety": {
-    "min_rows": 5,
+    "min_rows": 100,
     "min_share_of_last": 0.5,
-    "max_zero_share": 0.9
+    "max_zero_share": 0.9,
+    "max_missing_share": 0.5
   }
 }
