@@ -50,6 +50,7 @@ Open it in Notepad. In paths, write each `\` twice.
 | `export_file` | Where the export is saved, for example `C:\\AlolaSync\\stock.xlsx` |
 | `steps` | The clicks that make the export. See below |
 | `columns` | Leave empty. Only if the export's headings aren't found, put the exact heading of the code and stock columns |
+| `missing_is_zero` | `true` when E-Stock's report leaves out items with no stock (the **الرصيد > 0** box is ticked). A website product whose code isn't in the export is then set to 0. If more than half the website's products are missing, nothing is sent, since the export is probably wrong |
 
 `anon_key` and `supabase_url` are already filled in.
 
@@ -69,8 +70,11 @@ Do the export by hand once in E-Stock and write down each click: which menu, whi
 | `{"do": "wait_window", "title": ".*أرصدة.*"}` | Waits for a window to open and brings it to the front |
 | `{"do": "save_as"}` | In the Save window, types `export_file`, presses Enter and agrees to replace the old file |
 | `{"do": "close_window", "title": ".*أرصدة.*"}` | Closes a window, such as the report |
+| `{"do": "press_ok", "timeout": 60}` | Waits for a message box such as "Export completed" and presses OK |
 
-The steps in `config.example.json` are only an example. E-Stock's real menu names will differ.
+`save_as` can also pick the file type: `{"do": "save_as", "type": "Microsoft Excel (XLS) Data-Only"}`. Add `"optional": true` to any step that may not be needed every time: if it fails, the sync carries on.
+
+The steps in `config.example.json` are set up for e-Stock Retail 5.4: **المخازن > تقرير أصناف مخازن موجز > بحث > معاينة طباعة > Export Report**, saved as **Microsoft Excel (XLS) Data-Only**.
 
 To find click points and button names, open E-Stock and run:
 
